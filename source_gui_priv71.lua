@@ -2,12 +2,12 @@
 -- Standalone, mobile-friendly GUI library (no external deps).
 -- English only. Square theme. Blue accent (#0000FF).
 -- Style goals:
---   * Centered title: "priv71 - https://discord.gg/qzE7xvkzAZ" with "Da Hood" in red on the right, enlarged and centered at the top
+--   * Centered title: "priv71 - https://discord.gg/qzE7xvkzAZ" with "Da Hood" in red on the right
 --   * Uniform font: Enum.Font.Code across the UI
 --   * Checkbox-style toggles: fully blue when ON
 --   * No blue outline around the window (neutral stroke only)
 --   * Thin blue line above the "HvH Controls" card only
---   * GUI is static, no dragging or interaction after initialization
+--   * Clicking the "priv71" indicator reopens the GUI (no duplicates)
 --   * PC keybind to toggle UI (default RightShift), rebindable
 -- API (minimal):
 --   library:init()
@@ -112,6 +112,51 @@ function library:init()
         end
     end)
 
+    -- Open/Close button (draggable, square)
+    local btnW = isTouch() and 56 or 44
+    local btnH = isTouch() and 56 or 44
+    local openBtn = new("TextButton", {
+        Name = "PRIV71_OpenClose",
+        Parent = sg,
+        Position = UDim2.new(0, 10, 0, 10),
+        Size = UDim2.new(0, btnW, 0, btnH),
+        BackgroundColor3 = BG2,
+        Text = "UI",
+        TextColor3 = TEXT,
+        Font = Enum.Font.Code,
+        TextSize = isTouch() and 16 or 14,
+        AutoButtonColor = false,
+    })
+    new("UIStroke", { Parent = openBtn, Color = STROKE, Thickness = 1 })
+
+    openBtn.MouseButton1Click:Connect(function()
+        self:SetOpen(not self.open)
+    end)
+
+    -- Drag logic + sink camera while dragging
+    local dragging, dragStart, startPos
+    openBtn.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = i.Position
+            startPos = openBtn.Position
+            sinkDragInputs(true)
+            i.Changed:Connect(function()
+                if i.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                    sinkDragInputs(false)
+                end
+            end)
+        end
+    end)
+    openBtn.InputChanged:Connect(function(i)
+        if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+            local delta = i.Position - dragStart
+            openBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+
+    self._openBtn = openBtn
     getgenv().library_priv71 = self
 end
 
@@ -224,34 +269,56 @@ function library.NewWindow(data)
     local root = new("Frame", {
         Parent = sg,
         BackgroundColor3 = BG,
-        Size = data.size or UDim2.new(0, 500, 0, 800), -- Enlarged to 500x800
-        Position = data.position or UDim2.new(0.5, -250, 0.5, -400), -- Adjusted for centering
+        Size = data.size or UDim2.new(0, 300, 0, 400),
+        Position = data.position or UDim2.new(0.5, -150, 0.5, -200),
         Visible = selfLib.open,
     })
     new("UIStroke", { Parent = root, Color = STROKE, Thickness = 1 })
-    local topH = isTouch() and 60 or 50 -- Increased height for larger title
+    local topH = isTouch() and 40 or 32
     local top = new("Frame", {
         Parent = root, BackgroundColor3 = BG, Size = UDim2.new(1, 0, 0, topH), BorderSizePixel = 0
     })
     local title = new("TextLabel", {
         Parent = top, BackgroundTransparency = 1, Text = "priv71 - https://discord.gg/qzE7xvkzAZ",
-        TextColor3 = TEXT, Font = Enum.Font.Code, TextSize = isTouch() and 18 or 16, -- Larger text size
-        Size = UDim2.new(1, -140, 1, 0), -- Adjusted to fit within the enlarged top area
-        Position = UDim2.new(0.5, 0, 0, 0), -- Centered horizontally
+        TextColor3 = TEXT, Font = Enum.Font.Code, TextSize = isTouch() and 14 or 13,
+        Size = UDim2.new(0, 0, 1, 0), Position = UDim2.new(0.5, -((root.Size.X.Offset-160)/2), 0, 0),
         TextXAlignment = Enum.TextXAlignment.Center
     })
     local gameTag = new("TextLabel", {
         Parent = top, BackgroundTransparency = 1, Text = tostring(data.subtitle or "Da Hood"),
-        Font = Enum.Font.Code, TextSize = isTouch() and 18 or 16, -- Larger text size
-        TextColor3 = data.gameTagColor or RED,
-        Size = UDim2.new(0, 120, 1, 0), Position = UDim2.new(1, -120, 0, 0), TextXAlignment = Enum.TextXAlignment.Right
+        Font = Enum.Font.Code, TextSize = isTouch() and 14 or 13, TextColor3 = data.gameTagColor or RED,
+        Size = UDim2.new(0, 120, 1, 0), Position = UDim2.new(1, -160, 0, 0), TextXAlignment = Enum.TextXAlignment.Right
     })
     local close = new("TextButton", {
         Parent = top, BackgroundTransparency = 1, Text = "X", Font = Enum.Font.Code,
-        TextSize = isTouch() and 20 or 18, -- Larger text size
-        TextColor3 = SUBTXT, Size = UDim2.new(0, 40, 1, 0), Position = UDim2.new(1, -40, 0, 0)
+        TextSize = isTouch() and 18 or 16, TextColor3 = SUBTXT, Size = UDim2.new(0, 40, 1, 0), Position = UDim2.new(1, -40, 0, 0)
     })
     close.MouseButton1Click:Connect(function() selfLib:SetOpen(false) end)
+
+    -- Dragging + sink camera
+    do
+        local dragging, dragStart, startPos
+        top.InputBegan:Connect(function(i)
+            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = i.Position
+                startPos = root.Position
+                sinkDragInputs(true)
+                i.Changed:Connect(function()
+                    if i.UserInputState == Enum.UserInputState.End then
+                        dragging = false
+                        sinkDragInputs(false)
+                    end
+                end)
+            end
+        end)
+        top.InputChanged:Connect(function(i)
+            if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+                local delta = i.Position - dragStart
+                root.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            end
+        end)
+    end
 
     -- Body scroll
     local body = new("ScrollingFrame", {
@@ -271,7 +338,7 @@ function library.NewWindow(data)
 
     function window:AddTab(label)
         local tab = { sections = {} }
-        -- No "main" header, just sections
+        -- Pas d'en-tête "main", juste des sections
         function tab:AddSection(name, _)
             local sec = {}
             local card = new("Frame", { Parent = body, BackgroundColor3 = BG2, Size = UDim2.new(1, 0, 0, 64) })
@@ -280,7 +347,7 @@ function library.NewWindow(data)
                 TextColor3 = SUBTXT, Font = Enum.Font.Code, TextSize = isTouch() and 14 or 13, Size = UDim2.new(1, -12, 0, 18), Position = UDim2.new(0, 12, 0, 8),
                 TextXAlignment = Enum.TextXAlignment.Left
             })
-            -- Thin blue line above the content (not full width)
+            -- Ligne bleue fine au-dessus du contenu (pas pleine largeur)
             new("Frame", { Parent = card, BackgroundColor3 = ACCENT, Size = UDim2.new(0, 140, 0, 2), Position = UDim2.new(0, 12, 0, 28) })
 
             local list = new("Frame", { Parent = card, BackgroundTransparency = 1, Size = UDim2.new(1, -12, 1, -34), Position = UDim2.new(0, 12, 0, 32) })
@@ -328,9 +395,17 @@ function library.NewWindow(data)
                     end
                 end
 
-                -- Touch/Click handlers disabled
-                -- box.InputBegan:Connect(function(i) ... end) -- Removed
-                -- lbl.InputBegan:Connect(function(i) ... end) -- Removed
+                -- Touch/Click handlers
+                box.InputBegan:Connect(function(i)
+                    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+                        toggleNow()
+                    end
+                end)
+                lbl.InputBegan:Connect(function(i)
+                    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+                        toggleNow()
+                    end
+                end)
 
                 local api = {
                     class = "toggle",
@@ -359,10 +434,22 @@ function library.NewWindow(data)
 
                 local current = opt.default or Enum.KeyCode.RightShift
                 local listening = false
-                -- MouseButton1Click handler disabled
-                -- btn.MouseButton1Click:Connect(function() ... end) -- Removed
-                -- InputBegan handler disabled
-                -- local conn; conn = UserInputService.InputBegan:Connect(function(input, gpe) ... end) -- Removed
+                btn.MouseButton1Click:Connect(function()
+                    listening = true
+                    btn.Text = "Press..."
+                end)
+
+                local conn; conn = UserInputService.InputBegan:Connect(function(input, gpe)
+                    if not listening then return end
+                    if input.KeyCode ~= Enum.KeyCode.Unknown then
+                        current = input.KeyCode
+                        btn.Text = current.Name
+                        listening = false
+                        if typeof(opt.onChanged) == "function" then
+                            pcall(opt.onChanged, current)
+                        end
+                    end
+                end)
 
                 local api = {
                     Get = function() return current end,

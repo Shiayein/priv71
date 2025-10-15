@@ -1,6 +1,6 @@
 -- ui_priv71_example.lua
--- priv71 — UI only (square, mobile-friendly). No logic here.
--- Uses source_gui_priv71.lua and calls the logic via getgenv().PRIV71
+-- priv71 — UI with tabs (square, mobile-friendly). Loads lib and creates 3 test tabs.
+-- Calls logic via getgenv().PRIV71
 
 local PRIV71 = getgenv().PRIV71 or {}
 getgenv().PRIV71 = PRIV71
@@ -15,45 +15,31 @@ local library = libOrErr
 library:init()
 
 local Window = library.NewWindow({ title = "priv71", subtitle = "Da Hood" })
-local Tab = Window:AddTab("main")
-local Section = Tab:AddSection("HvH Controls", 1)
 
--- Left indicator (tap to reopen the GUI; no duplicates)
-local statusIndicator = library.NewIndicator({
-    title = "priv71",
-    enabled = true,
-    position = UDim2.new(0, 12, 0, 240),
-    clickToOpen = true
-})
-local statusValue = statusIndicator:AddValue({ key = "Status", value = "Idle" })
+-- Tab 1: Main
+local MainTab = Window:AddTab("Main")
+local MainSection = MainTab:AddSection("General Controls", 1)
+MainSection:AddToggle({ text = "Notifications", state = false, callback = function(on) PRIV71.ToggleNotifications(on) end })
 
--- Allow the logic to push status to the UI
-PRIV71.SetStatus = function(text)
-    statusValue:SetValue(tostring(text or "Idle"))
-end
+-- Tab 2: HvH
+local HvHTab = Window:AddTab("HvH")
+local HvHSection = HvHTab:AddSection("Combat Controls", 1)
+HvHSection:AddToggle({ text = "Silent Aim", state = false, callback = function(on) PRIV71.StartSilentAim(on) end })
+HvHSection:AddToggle({ text = "Auto Strafe", state = false, callback = function(on) PRIV71.StartAutoStrafe(on) end })
 
--- UI -> Logic
-Section:AddToggle({
-    text = "Silent Aim",
-    state = false,
-    callback = function(on)
-        if PRIV71.StartSilentAim then PRIV71.StartSilentAim(on) end
-    end
+-- Tab 3: Character
+local CharTab = Window:AddTab("Character")
+local CharSection = CharTab:AddSection("Player Mods", 1)
+CharSection:AddToggle({ text = "Speed Hack", state = false, callback = function(on) PRIV71.SetSpeed(on) end })
+
+-- Settings keybind (added to first tab for simplicity)
+MainSection:AddKeybind({
+    text = "Toggle UI Key", default = Enum.KeyCode.RightShift,
+    onChanged = function(key) library:SetToggleKey(key); library:SendNotification("UI key set to: " .. key.Name, 2) end
 })
 
-Section:AddToggle({
-    text = "Auto Strafe",
-    state = false,
-    callback = function(on)
-        if PRIV71.StartAutoStrafe then PRIV71.StartAutoStrafe(on) end
-    end
-})
-
-Section:AddKeybind({
-    text = "Toggle UI Key",
-    default = Enum.KeyCode.RightShift,
-    onChanged = function(key)
-        library:SetToggleKey(key)
-        library:SendNotification("UI key set to: " .. key.Name, 2)
-    end
-})
+-- Test logic hooks
+PRIV71.ToggleNotifications = function(on) print("Notifications:", on) end
+PRIV71.StartSilentAim = function(on) print("Silent Aim:", on) end
+PRIV71.StartAutoStrafe = function(on) print("Auto Strafe:", on) end
+PRIV71.SetSpeed = function(on) print("Speed:", on) end

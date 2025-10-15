@@ -7,8 +7,9 @@
 --   * Checkbox-style toggles: fully blue when ON
 --   * No blue outline around the window (neutral stroke only)
 --   * Thin blue line above the "HvH Controls" card only
---   * Clicking the "priv71" indicator reopens the GUI (no duplicates)
+--   * Clicking the "priv71" indicator reopens the GUI (no duplicates) [Removed]
 --   * PC keybind to toggle UI (default RightShift), rebindable
+--   * Tab bar at bottom: clickable, scrolling if many tabs, content changes on click
 -- API (minimal):
 --   library:init()
 --   library:SetOpen(bool)
@@ -18,8 +19,7 @@
 --   tab:AddSection(title, col) -> section
 --   section:AddToggle({text,state,callback}) -> toggleApi
 --   section:AddKeybind({text,default,onChanged}) -> keybindApi
---   library.NewIndicator({title,enabled,position,clickToOpen}) -> indicator
---   indicator:AddValue({key,value}) -> valueApi
+--   library.NewIndicator({title,enabled,position,clickToOpen}) -> indicator [Removed from default]
 
 local startupArgs = ({...})[1] or {}
 
@@ -59,7 +59,6 @@ local RED    = Color3.fromRGB(220, 80, 80)
 
 local library = {
     windows = {},
-    indicators = {},
     connections = {},
     cheatname = startupArgs.cheatname or "priv71",
     gamename  = startupArgs.gamename  or "Da Hood",
@@ -85,12 +84,9 @@ local function sinkDragInputs(bind)
 end
 
 function library:Unload()
-    if self._gui then
-        self._gui:Destroy()
-    end
+    if self._gui then self._gui:Destroy() end
     for _,c in ipairs(self.connections) do pcall(function() c:Disconnect() end) end
     self.windows = {}
-    self.indicators = {}
     getgenv().library_priv71 = nil
 end
 
@@ -103,60 +99,11 @@ function library:init()
     sg.Parent = game:GetService("CoreGui")
     self._gui = sg
 
-    -- Keyboard toggle
     connect(UserInputService.InputBegan, function(input, gpe)
-        if gpe then return end
-        if UserInputService:GetFocusedTextBox() then return end
-        if input.KeyCode == self.toggleKey then
-            self:SetOpen(not self.open)
-        end
+        if gpe or UserInputService:GetFocusedTextBox() then return end
+        if input.KeyCode == self.toggleKey then self:SetOpen(not self.open) end
     end)
 
-    -- Open/Close button (draggable, square)
-    local btnW = isTouch() and 56 or 44
-    local btnH = isTouch() and 56 or 44
-    local openBtn = new("TextButton", {
-        Name = "PRIV71_OpenClose",
-        Parent = sg,
-        Position = UDim2.new(0, 10, 0, 10),
-        Size = UDim2.new(0, btnW, 0, btnH),
-        BackgroundColor3 = BG2,
-        Text = "UI",
-        TextColor3 = TEXT,
-        Font = Enum.Font.Code,
-        TextSize = isTouch() and 16 or 14,
-        AutoButtonColor = false,
-    })
-    new("UIStroke", { Parent = openBtn, Color = STROKE, Thickness = 1 })
-
-    openBtn.MouseButton1Click:Connect(function()
-        self:SetOpen(not self.open)
-    end)
-
-    -- Drag logic + sink camera while dragging
-    local dragging, dragStart, startPos
-    openBtn.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = i.Position
-            startPos = openBtn.Position
-            sinkDragInputs(true)
-            i.Changed:Connect(function()
-                if i.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                    sinkDragInputs(false)
-                end
-            end)
-        end
-    end)
-    openBtn.InputChanged:Connect(function(i)
-        if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
-            local delta = i.Position - dragStart
-            openBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-
-    self._openBtn = openBtn
     getgenv().library_priv71 = self
 end
 
@@ -175,12 +122,8 @@ function library:SendNotification(text, timeSec, color)
     local sg = self._gui
     if not sg then return end
     local holder = sg:FindFirstChild("NotifHolder") or new("Frame", {
-        Name = "NotifHolder",
-        Parent = sg,
-        AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, -10, 0, 10),
-        Size = UDim2.new(0, 300, 1, -20),
-        BackgroundTransparency = 1,
+        Name = "NotifHolder", Parent = sg, AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(1, -10, 0, 10), Size = UDim2.new(0, 300, 1, -20), BackgroundTransparency = 1,
     })
     local y = #holder:GetChildren() * 36
     local f = new("Frame", {
@@ -201,93 +144,27 @@ function library:SendNotification(text, timeSec, color)
     end)
 end
 
-function library.NewIndicator(data)
-    data = data or {}
-    local selfLib = getgenv().library_priv71
-    local sg = selfLib and selfLib._gui
-    if not sg then return end
-    local frame = new("Frame", {
-        Parent = sg,
-        BackgroundColor3 = BG,
-        Size = UDim2.new(0, 220, 0, 46),
-        Position = data.position or UDim2.new(0, 12, 0, 240),
-        Visible = data.enabled == nil and true or data.enabled,
-    })
-    new("UIStroke", { Parent = frame, Color = STROKE, Thickness = 1 })
-    local title = new("TextLabel", {
-        Parent = frame, BackgroundTransparency = 1, Text = data.title or "priv71",
-        TextColor3 = TEXT, Font = Enum.Font.Code, TextSize = 14, Size = UDim2.new(1, -10, 0, 18), Position = UDim2.new(0, 10, 0, 4),
-        TextXAlignment = Enum.TextXAlignment.Left
-    })
-    local listHolder = new("Frame", { Parent = frame, BackgroundTransparency = 1, Size = UDim2.new(1, -10, 1, -24), Position = UDim2.new(0, 10, 0, 22)})
-    local layout = new("UIListLayout", { Parent = listHolder, FillDirection = Enum.FillDirection.Vertical, Padding = UDim.new(0, 2) })
-
-    local indicator = { _frame = frame, _holder = listHolder, values = {} }
-
-    function indicator:SetEnabled(b) frame.Visible = b end
-    function indicator:SetPosition(u) frame.Position = u end
-
-    -- Click-to-open GUI
-    if data.clickToOpen ~= false then
-        local function reOpen()
-            local lib = getgenv().library_priv71
-            if lib then lib:SetOpen(true) end
-        end
-        frame.InputBegan:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-                reOpen()
-            end
-        end)
-        title.InputBegan:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-                reOpen()
-            end
-        end)
-    end
-
-    function indicator:AddValue(data)
-        data = data or {}
-        local value = new("TextLabel", {
-            Parent = listHolder, BackgroundTransparency = 1, Text = data.key .. ": " .. tostring(data.value or ""),
-            TextColor3 = TEXT, Font = Enum.Font.Code, TextSize = 12, Size = UDim2.new(1, 0, 0, 16),
-            TextXAlignment = Enum.TextXAlignment.Left
-        })
-        local api = { _label = value }
-        function api:SetValue(v) value.Text = data.key .. ": " .. tostring(v or "") end
-        table.insert(indicator.values, api)
-        return api
-    end
-
-    return indicator
-end
-
 function library.NewWindow(data)
     data = data or {}
     local selfLib = getgenv().library_priv71
     local sg = selfLib and selfLib._gui
     if not sg then return end
     local root = new("Frame", {
-        Parent = sg,
-        BackgroundColor3 = BG,
-        Size = data.size or UDim2.new(0, 300, 0, 400),
-        Position = data.position or UDim2.new(0.5, -150, 0.5, -200),
-        Visible = selfLib.open,
+        Parent = sg, BackgroundColor3 = BG, Size = data.size or UDim2.new(0, 450, 0, 600),
+        Position = data.position or UDim2.new(0.5, -225, 0.5, -300), Visible = selfLib.open,
     })
     new("UIStroke", { Parent = root, Color = STROKE, Thickness = 1 })
-    local topH = isTouch() and 40 or 32
-    local top = new("Frame", {
-        Parent = root, BackgroundColor3 = BG, Size = UDim2.new(1, 0, 0, topH), BorderSizePixel = 0
-    })
+    local topH = isTouch() and 50 or 40
+    local top = new("Frame", { Parent = root, BackgroundColor3 = BG, Size = UDim2.new(1, 0, 0, topH), BorderSizePixel = 0 })
     local title = new("TextLabel", {
-        Parent = top, BackgroundTransparency = 1, Text = "priv71",
-        TextColor3 = TEXT, Font = Enum.Font.Code, TextSize = isTouch() and 14 or 13,
-        Size = UDim2.new(0, 0, 1, 0), Position = UDim2.new(0.5, -((root.Size.X.Offset-160)/2), 0, 0),
-        TextXAlignment = Enum.TextXAlignment.Center
+        Parent = top, BackgroundTransparency = 1, Text = "priv71 - https://discord.gg/qzE7xvkzAZ",
+        TextColor3 = TEXT, Font = Enum.Font.Code, TextSize = isTouch() and 16 or 14,
+        Size = UDim2.new(1, -140, 1, 0), Position = UDim2.new(0.5, 0, 0, 0), TextXAlignment = Enum.TextXAlignment.Center
     })
     local gameTag = new("TextLabel", {
         Parent = top, BackgroundTransparency = 1, Text = tostring(data.subtitle or "Da Hood"),
-        Font = Enum.Font.Code, TextSize = isTouch() and 14 or 13, TextColor3 = data.gameTagColor or RED,
-        Size = UDim2.new(0, 120, 1, 0), Position = UDim2.new(1, -160, 0, 0), TextXAlignment = Enum.TextXAlignment.Right
+        Font = Enum.Font.Code, TextSize = isTouch() and 16 or 14, TextColor3 = data.gameTagColor or RED,
+        Size = UDim2.new(0, 120, 1, 0), Position = UDim2.new(1, -120, 0, 0), TextXAlignment = Enum.TextXAlignment.Right
     })
     local close = new("TextButton", {
         Parent = top, BackgroundTransparency = 1, Text = "X", Font = Enum.Font.Code,
@@ -295,7 +172,7 @@ function library.NewWindow(data)
     })
     close.MouseButton1Click:Connect(function() selfLib:SetOpen(false) end)
 
-    -- Dragging + sink camera
+    -- Dragging
     do
         local dragging, dragStart, startPos
         top.InputBegan:Connect(function(i)
@@ -305,10 +182,7 @@ function library.NewWindow(data)
                 startPos = root.Position
                 sinkDragInputs(true)
                 i.Changed:Connect(function()
-                    if i.UserInputState == Enum.UserInputState.End then
-                        dragging = false
-                        sinkDragInputs(false)
-                    end
+                    if i.UserInputState == Enum.UserInputState.End then dragging = false; sinkDragInputs(false) end
                 end)
             end
         end)
@@ -320,42 +194,69 @@ function library.NewWindow(data)
         end)
     end
 
-    -- Body scroll
-    local body = new("ScrollingFrame", {
-        Parent = root, BackgroundColor3 = BG3, Size = UDim2.new(1, -16, 1, -(topH + 16)),
+    -- Main body for tabs content
+    local mainBody = new("ScrollingFrame", {
+        Parent = root, BackgroundColor3 = BG3, Size = UDim2.new(1, -16, 1, -(topH + 80)), -- Space for tabs bar
         Position = UDim2.new(0, 8, 0, topH + 8), CanvasSize = UDim2.new(0, 0, 0, 0), ScrollBarImageTransparency = 0.5
     })
-    new("UIStroke", { Parent = body, Color = STROKE, Thickness = 1 })
-    local bodyLayout = new("UIListLayout", { Parent = body, FillDirection = Enum.FillDirection.Vertical, Padding = UDim.new(0, 8) })
-    bodyLayout.Changed:Connect(function()
-        body.CanvasSize = UDim2.new(0, 0, 0, bodyLayout.AbsoluteContentSize.Y + 16)
-    end)
+    new("UIStroke", { Parent = mainBody, Color = STROKE, Thickness = 1 })
+    local mainLayout = new("UIListLayout", { Parent = mainBody, FillDirection = Enum.FillDirection.Vertical, Padding = UDim.new(0, 8) })
+    mainLayout.Changed:Connect(function() mainBody.CanvasSize = UDim2.new(0, 0, 0, mainLayout.AbsoluteContentSize.Y + 16) end)
 
-    local window = { _root = root, _body = body, tabs = {} }
+    -- Tabs bar at bottom
+    local tabsBar = new("ScrollingFrame", {
+        Parent = root, BackgroundColor3 = BG2, Size = UDim2.new(1, -16, 0, 32),
+        Position = UDim2.new(0, 8, 1, -40), CanvasSize = UDim2.new(0, 0, 0, 32), ScrollBarThickness = 0
+    })
+    new("UIStroke", { Parent = tabsBar, Color = STROKE, Thickness = 1 })
+    local tabsLayout = new("UIListLayout", { Parent = tabsBar, FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4) })
+    tabsLayout.Changed:Connect(function() tabsBar.CanvasSize = UDim2.new(0, tabsLayout.AbsoluteContentSize.X + 8, 0, 0) end)
+
+    local window = { _root = root, _mainBody = mainBody, _tabsBar = tabsBar, tabs = {}, currentTab = nil }
     table.insert(library.windows, window)
 
     function window:SetOpen(b) root.Visible = b end
 
-    function window:AddTab(label)
-        local tab = { sections = {} }
-        -- Pas d'en-tête "main", juste des sections
-        function tab:AddSection(name, _)
+    function window:AddTab(name)
+        local tabBody = new("Frame", { Parent = mainBody, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0), Visible = false })
+        local tabLayout = new("UIListLayout", { Parent = tabBody, FillDirection = Enum.FillDirection.Vertical, Padding = UDim.new(0, 8) })
+        tabLayout.Changed:Connect(function() tabBody.Size = UDim2.new(1, 0, 0, tabLayout.AbsoluteContentSize.Y + 16) end)
+        mainLayout.Changed:Connect(function() mainBody.CanvasSize = UDim2.new(0, 0, 0, mainLayout.AbsoluteContentSize.Y + 16) end)
+
+        local tabButton = new("TextButton", {
+            Parent = tabsBar, BackgroundColor3 = BG3, Size = UDim2.new(0, 80, 1, 0), Text = name,
+            TextColor3 = TEXT, Font = Enum.Font.Code, TextSize = 12, BorderSizePixel = 0
+        })
+        new("UIStroke", { Parent = tabButton, Color = STROKE, Thickness = 1 })
+        tabButton.MouseButton1Click:Connect(function()
+            if window.currentTab then window.currentTab.Visible = false end
+            tabBody.Visible = true
+            window.currentTab = tabBody
+            tabButton.BackgroundColor3 = ACCENT
+            -- Reset other tabs color
+            for _, t in ipairs(window.tabs) do if t.button ~= tabButton then t.button.BackgroundColor3 = BG3 end end
+        end)
+
+        local tab = { _body = tabBody, _layout = tabLayout, sections = {}, button = tabButton }
+        table.insert(window.tabs, tab)
+
+        -- Show first tab by default
+        if #window.tabs == 1 then tabBody.Visible = true; window.currentTab = tabBody; tabButton.BackgroundColor3 = ACCENT end
+
+        function tab:AddSection(title, col)
             local sec = {}
-            local card = new("Frame", { Parent = body, BackgroundColor3 = BG2, Size = UDim2.new(1, 0, 0, 64) })
+            local card = new("Frame", { Parent = tabBody, BackgroundColor3 = BG2, Size = UDim2.new(1, 0, 0, 64) })
             new("UIStroke", { Parent = card, Color = STROKE, Thickness = 1 })
-            local title = new("TextLabel", { Parent = card, BackgroundTransparency = 1, Text = tostring(name or "Section"),
+            local secTitle = new("TextLabel", { Parent = card, BackgroundTransparency = 1, Text = title,
                 TextColor3 = SUBTXT, Font = Enum.Font.Code, TextSize = isTouch() and 14 or 13, Size = UDim2.new(1, -12, 0, 18), Position = UDim2.new(0, 12, 0, 8),
                 TextXAlignment = Enum.TextXAlignment.Left
             })
-            -- Ligne bleue fine au-dessus du contenu (pas pleine largeur)
             new("Frame", { Parent = card, BackgroundColor3 = ACCENT, Size = UDim2.new(0, 140, 0, 2), Position = UDim2.new(0, 12, 0, 28) })
 
             local list = new("Frame", { Parent = card, BackgroundTransparency = 1, Size = UDim2.new(1, -12, 1, -34), Position = UDim2.new(0, 12, 0, 32) })
             local ll = new("UIListLayout", { Parent = list, FillDirection = Enum.FillDirection.Vertical, Padding = UDim.new(0, 8) })
 
-            local function resize()
-                card.Size = UDim2.new(1, 0, 0, 34 + ll.AbsoluteContentSize.Y + 12)
-            end
+            local function resize() card.Size = UDim2.new(1, 0, 0, 34 + ll.AbsoluteContentSize.Y + 12) end
             resize()
             ll.Changed:Connect(resize)
 
@@ -364,54 +265,31 @@ function library.NewWindow(data)
                 local rowH = isTouch() and 36 or 28
                 local row = new("Frame", { Parent = list, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, rowH) })
                 local lbl = new("TextLabel", {
-                    Parent = row, BackgroundTransparency = 1, Text = tostring(opt.text or "Toggle"),
+                    Parent = row, BackgroundTransparency = 1, Text = opt.text or "Toggle",
                     TextColor3 = TEXT, Font = Enum.Font.Code, TextSize = isTouch() and 15 or 13,
                     Size = UDim2.new(1, -40, 1, 0), TextXAlignment = Enum.TextXAlignment.Left
                 })
 
                 local boxSize = isTouch() and 22 or 18
-                local box = new("Frame", {
-                    Parent = row, BackgroundColor3 = BG3, Size = UDim2.new(0, boxSize, 0, boxSize),
-                    Position = UDim2.new(1, -(boxSize), 0.5, 0), AnchorPoint = Vector2.new(1, 0.5)
-                })
+                local box = new("Frame", { Parent = row, BackgroundColor3 = BG3, Size = UDim2.new(0, boxSize, 0, boxSize),
+                    Position = UDim2.new(1, -boxSize, 0.5, 0), AnchorPoint = Vector2.new(1, 0.5) })
                 new("UIStroke", { Parent = box, Color = STROKE, Thickness = 1 })
+                local fill = new("Frame", { Parent = box, BackgroundColor3 = ACCENT, Size = UDim2.new(1, 0, 1, 0), Visible = false })
 
-                local fill = new("Frame", {
-                    Parent = box, BackgroundColor3 = ACCENT, Size = UDim2.new(1, 0, 1, 0),
-                    Position = UDim2.new(0, 0, 0, 0), Visible = false
-                })
-
-                local state = opt.state and true or false
-                local function apply()
-                    fill.Visible = state
-                end
+                local state = opt.state or false
+                local function apply() fill.Visible = state end
                 apply()
 
                 local function toggleNow()
                     state = not state
                     apply()
-                    if typeof(opt.callback) == "function" then
-                        task.spawn(opt.callback, state)
-                    end
+                    if typeof(opt.callback) == "function" then task.spawn(opt.callback, state) end
                 end
 
-                -- Touch/Click handlers
-                box.InputBegan:Connect(function(i)
-                    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-                        toggleNow()
-                    end
-                end)
-                lbl.InputBegan:Connect(function(i)
-                    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-                        toggleNow()
-                    end
-                end)
+                box.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then toggleNow() end end)
+                lbl.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then toggleNow() end end)
 
-                local api = {
-                    class = "toggle",
-                    SetState = function(_, b) state = b and true or false; apply() end,
-                    GetState = function() return state end,
-                }
+                local api = { SetState = function(_, b) state = b; apply() end, GetState = function() return state end }
                 return api
             end
 
@@ -419,49 +297,37 @@ function library.NewWindow(data)
                 opt = opt or {}
                 local rowH = isTouch() and 36 or 28
                 local row = new("Frame", { Parent = list, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, rowH) })
-                new("TextLabel", {
-                    Parent = row, BackgroundTransparency = 1, Text = tostring(opt.text or "Keybind"),
+                new("TextLabel", { Parent = row, BackgroundTransparency = 1, Text = opt.text or "Keybind",
                     TextColor3 = TEXT, Font = Enum.Font.Code, TextSize = isTouch() and 15 or 13,
-                    Size = UDim2.new(1, -120, 1, 0), TextXAlignment = Enum.TextXAlignment.Left
-                })
-                local btn = new("TextButton", {
-                    Parent = row, BackgroundColor3 = BG3, Size = UDim2.new(0, 110, 0, isTouch() and 28 or 24),
+                    Size = UDim2.new(1, -120, 1, 0), TextXAlignment = Enum.TextXAlignment.Left })
+                local btn = new("TextButton", { Parent = row, BackgroundColor3 = BG3, Size = UDim2.new(0, 110, 0, isTouch() and 28 or 24),
                     Position = UDim2.new(1, -112, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5),
-                    Text = (opt.default and opt.default.Name) or "RightShift", TextColor3 = TEXT,
-                    Font = Enum.Font.Code, TextSize = isTouch() and 14 or 12, AutoButtonColor = false
-                })
+                    Text = (opt.default and opt.default.Name) or "RightShift", TextColor3 = TEXT, Font = Enum.Font.Code, TextSize = 14,
+                    AutoButtonColor = false })
                 new("UIStroke", { Parent = btn, Color = STROKE, Thickness = 1 })
 
                 local current = opt.default or Enum.KeyCode.RightShift
                 local listening = false
-                btn.MouseButton1Click:Connect(function()
-                    listening = true
-                    btn.Text = "Press..."
-                end)
+                btn.MouseButton1Click:Connect(function() listening = true; btn.Text = "Press..." end)
 
-                local conn; conn = UserInputService.InputBegan:Connect(function(input, gpe)
+                connect(UserInputService.InputBegan, function(input, gpe)
                     if not listening then return end
                     if input.KeyCode ~= Enum.KeyCode.Unknown then
                         current = input.KeyCode
                         btn.Text = current.Name
                         listening = false
-                        if typeof(opt.onChanged) == "function" then
-                            pcall(opt.onChanged, current)
-                        end
+                        if typeof(opt.onChanged) == "function" then pcall(opt.onChanged, current) end
                     end
                 end)
 
-                local api = {
-                    Get = function() return current end,
-                    Set = function(_, key) current = key; btn.Text = key.Name end
-                }
+                local api = { Get = function() return current end, Set = function(_, key) current = key; btn.Text = key.Name end }
                 return api
             end
 
-            tab.sections[#tab.sections+1] = sec
+            table.insert(tab.sections, sec)
             return sec
         end
-        table.insert(window.tabs, tab)
+
         return tab
     end
 

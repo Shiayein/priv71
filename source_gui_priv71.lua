@@ -269,8 +269,8 @@ function library.NewWindow(data)
     local root = new("Frame", {
         Parent = sg,
         BackgroundColor3 = BG,
-        Size = data.size or UDim2.new(0, 300, 0, 400),
-        Position = data.position or UDim2.new(0.5, -150, 0.5, -200),
+        Size = data.size or UDim2.new(0, 400, 0, 600), -- Augmenté à 400x600
+        Position = data.position or UDim2.new(0.5, -200, 0.5, -300), -- Ajusté pour centrer avec la nouvelle taille
         Visible = selfLib.open,
     })
     new("UIStroke", { Parent = root, Color = STROKE, Thickness = 1 })

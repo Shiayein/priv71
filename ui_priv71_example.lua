@@ -5,7 +5,7 @@
 local PRIV71 = getgenv().PRIV71 or {}
 getgenv().PRIV71 = PRIV71
 
-local LIB_URL = "https://raw.githubusercontent.com/Shiayein/priv71/main/source_gui_priv71.lua"
+local LIB_URL = "https://raw.githubusercontent.com/Shiayein/priv71/refs/heads/main/source_gui_priv71.lua"
 local ok, libOrErr = pcall(function() return loadstring(game:HttpGet(LIB_URL))() end)
 if not ok then
     warn("[priv71 UI] Failed to load source_gui_priv71.lua: ", tostring(libOrErr))

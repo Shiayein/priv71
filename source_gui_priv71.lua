@@ -279,7 +279,7 @@ function library.NewWindow(data)
         Parent = root, BackgroundColor3 = BG, Size = UDim2.new(1, 0, 0, topH), BorderSizePixel = 0
     })
     local title = new("TextLabel", {
-        Parent = top, BackgroundTransparency = 1, Text = "priv71 - https://discord.gg/qzE7xvkzAZ",
+        Parent = top, BackgroundTransparency = 1, Text = "priv71",
         TextColor3 = TEXT, Font = Enum.Font.Code, TextSize = isTouch() and 14 or 13,
         Size = UDim2.new(0, 0, 1, 0), Position = UDim2.new(0.5, -((root.Size.X.Offset-160)/2), 0, 0),
         TextXAlignment = Enum.TextXAlignment.Center

@@ -1,3 +1,82 @@
+-- main.lua (with HWID/key verification and kick)
+-- Loader verification
+if not _G.LOADED_WITH_LOADER then
+    -- Kick with personalized message if injected without loader
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+    local username = LocalPlayer and LocalPlayer.Name or "Unknown"
+    LocalPlayer:Kick("FocK YoU " .. username .. ", ez skidder :3!")
+    return
+end
+
+-- === ImmortalFarm Key Check (top-of-file) ===
+do
+    local REPO = "https://raw.githubusercontent.com/Shiayein/priv71/refs/heads/main/"
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+    local userId = LocalPlayer and LocalPlayer.UserId or 0
+    local username = LocalPlayer and LocalPlayer.Name or "Unknown"
+
+    -- Get HWID
+    local hwid = game:GetService("RbxAnalyticsService"):GetClientId()
+    print("[HWID] Your HWID is: " .. hwid)
+    if setclipboard then
+        setclipboard(hwid)
+        print("[HWID] HWID copied to clipboard!")
+    else
+        warn("[HWID] Clipboard not supported!")
+    end
+
+    -- Load key system
+    local src, httpErr = game:HttpGet(REPO .. "key_system.lua")
+    if not src or #src == 0 then
+        LocalPlayer:Kick("Sorry " .. username .. ", failed to load key store: " .. tostring(httpErr))
+        return
+    end
+    local chunk, compileErr = loadstring(src)
+    if not chunk then
+        LocalPlayer:Kick("Sorry " .. username .. ", key system compile error: " .. tostring(compileErr))
+        return
+    end
+    local KeyStore = chunk()
+    local script_key = _G.SCRIPT_KEY or "NO_KEY"
+    print("[KEY] Checking key: " .. script_key) -- Debug log
+    print("[MAIN] Global SCRIPT_KEY value: " .. tostring(_G.SCRIPT_KEY)) -- Debug log
+    local isValid = false
+    for _, devKey in pairs(KeyStore.DEV_KEYS) do
+        if devKey == script_key then
+            isValid = true
+            print("[KEY] Valid developer key found!")
+            break
+        end
+    end
+    for key, data in pairs(KeyStore.KEYS) do
+        if key == script_key then
+            if #data.users == 0 or table.find(data.users, userId) then
+                isValid = true
+                print("[KEY] Valid key found for user or universal use!")
+                if data.hwid and data.hwid ~= "" and data.hwid ~= hwid then
+                    LocalPlayer:Kick("Sorry " .. username .. ", your HWID does not match the key!")
+                    return
+                end
+                break
+            end
+        end
+    end
+    if not isValid then
+        LocalPlayer:Kick("Sorry " .. username .. ", invalid key detected!")
+        return
+    end
+    print("[MAIN] Key verification passed, starting script...") -- Debug log
+
+    -- Rest of the script (copy the remaining code here)
+    local function safe_mkdir()
+        if hasFS and not isfolder(FOLDER) then
+            pcall(makefolder, FOLDER)
+        end
+    end
+    -- ... (paste the rest of your original main.lua content here, e.g., from "local function read_saved_key()" onward)
+end
 local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
 local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
 local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
@@ -4244,88 +4323,6 @@ getgenv().PlayerActions:AddButton('Stop', function()
 end)
 
 getgenv().AllPlayerActions = Tabs.Players:AddRightGroupbox('All Player Actions')
-
--- Ragebot Section (Player List + View + Keybind)
-getgenv().RagebotBox = Tabs.Players:AddRightGroupbox('Ragebot')
-
--- Main toggle + keybind
-getgenv().RagebotBox:AddToggle('RagebotToggle', {
-    Text = 'Enable Ragebot',
-    Default = false,
-    Callback = function(state)
-        getgenv().RagebotEnabled = state
-        if not state then
-            workspace.CurrentCamera.CameraSubject = Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        end
-    end
-}):AddKeyPicker('RagebotKey', {
-    Default = 'R',
-    Text = 'Ragebot Key',
-    Mode = 'Toggle',
-    Callback = function(state)
-        if UserInputService:GetFocusedTextBox() then return end
-        getgenv().RagebotEnabled = state
-        if not state then
-            workspace.CurrentCamera.CameraSubject = Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        end
-    end
-})
-
--- Dropdown: list of all players
-getgenv().RagebotDropdown = getgenv().RagebotBox:AddDropdown('RageTarget', {
-    SpecialType = 'Player',
-    Text = 'Select Ragebot Target',
-    Tooltip = 'Select a player to lock the view on when Ragebot is active.',
-    Callback = function(value)
-        getgenv().SelectedRageTarget = value
-    end,
-})
-
--- View toggle (only works when Ragebot is enabled)
-getgenv().RagebotBox:AddToggle('RagebotView', {
-    Text = 'View Target',
-    Default = false,
-    Callback = function(state)
-        getgenv().RagebotViewEnabled = state
-
-        if not state then
-            workspace.CurrentCamera.CameraSubject = Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            return
-        end
-
-        task.spawn(function()
-            while getgenv().RagebotViewEnabled and getgenv().RagebotEnabled do
-                local targetPlayer = Services.Players:FindFirstChild(getgenv().SelectedRageTarget)
-                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
-                    workspace.CurrentCamera.CameraSubject = targetPlayer.Character.Humanoid
-                end
-                task.wait(0.1)
-            end
-            workspace.CurrentCamera.CameraSubject = Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        end)
-    end,
-})
-
--- Auto-refresh player list when someone joins/leaves
-Services.Players.PlayerAdded:Connect(function()
-    local names = {}
-    for _, plr in pairs(Services.Players:GetPlayers()) do
-        table.insert(names, plr.Name)
-    end
-    Options.RageTarget.Values = names
-end)
-
-Services.Players.PlayerRemoving:Connect(function()
-    local names = {}
-    for _, plr in pairs(Services.Players:GetPlayers()) do
-        table.insert(names, plr.Name)
-    end
-    Options.RageTarget.Values = names
-end)
-
-
-
-
 
 getgenv().ShopFolder = Workspace:WaitForChild("Ignored"):WaitForChild("Shop")
 getgenv().OriginalPosition = nil

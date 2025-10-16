@@ -4325,7 +4325,66 @@ end)
 getgenv().AllPlayerActions = Tabs.Players:AddRightGroupbox('All Player Actions')
 
 
+-- Ragebot Section (Player List + View + Keybind)
+getgenv().RagebotBox = Tabs.Players:AddRightGroupbox('Ragebot')
 
+-- Main toggle + keybind
+getgenv().RagebotBox:AddToggle('RagebotToggle', {
+    Text = 'Enable Ragebot',
+    Default = false,
+    Callback = function(state)
+        getgenv().RagebotEnabled = state
+        if not state then
+            workspace.CurrentCamera.CameraSubject = Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        end
+    end
+}):AddKeyPicker('RagebotKey', {
+    Default = 'R',
+    Text = 'Ragebot Key',
+    Mode = 'Toggle',
+    Callback = function(state)
+        if UserInputService:GetFocusedTextBox() then return end
+        getgenv().RagebotEnabled = state
+        if not state then
+            workspace.CurrentCamera.CameraSubject = Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        end
+    end
+})
+
+-- Dropdown: list of all players
+getgenv().RagebotDropdown = getgenv().RagebotBox:AddDropdown('RageTarget', {
+    SpecialType = 'Player',
+    Text = 'Select Ragebot Target',
+    Tooltip = 'Select a player to lock the view on when Ragebot is active.',
+    Callback = function(value)
+        getgenv().SelectedRageTarget = value
+    end,
+})
+
+-- View toggle (only works when Ragebot is enabled)
+getgenv().RagebotBox:AddToggle('RagebotView', {
+    Text = 'View Target',
+    Default = false,
+    Callback = function(state)
+        getgenv().RagebotViewEnabled = state
+
+        if not state then
+            workspace.CurrentCamera.CameraSubject = Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            return
+        end
+
+        task.spawn(function()
+            while getgenv().RagebotViewEnabled and getgenv().RagebotEnabled do
+                local targetPlayer = Services.Players:FindFirstChild(getgenv().SelectedRageTarget)
+                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
+                    workspace.CurrentCamera.CameraSubject = targetPlayer.Character.Humanoid
+                end
+                task.wait(0.1)
+            end
+            workspace.CurrentCamera.CameraSubject = Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        end)
+    end,
+})
 
 
 

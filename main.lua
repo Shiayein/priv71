@@ -66,7 +66,33 @@ do
         return
     end
     print("[MAIN] Key verification passed, starting script...")
+    print("[MAIN] Script initialized, proceeding to next steps...") -- Added to confirm continuation
 end
+
+-- Add the rest of your script here (e.g., LinoriaLib initialization, UI setup)
+-- Example continuation (based on your truncated document):
+local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
+local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
+if not Library then
+    warn("[MAIN] Failed to load Library from LinoriaLib!")
+    return
+end
+print("[MAIN] Library loaded successfully")
+local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
+local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
+local Window = Library:CreateWindow({ Title = '                     priv71  .GG/TRACED                    ', AutoShow = true, TabPadding = 15, MenuFadeTime = 0.2 })
+if not Window then
+    warn("[MAIN] Failed to create Window!")
+    return
+end
+print("[MAIN] Window created successfully")
+local Tabs = { Main = Window:AddTab('Main'), Character = Window:AddTab('Character'), Visuals = Window:AddTab('Visuals'), Misc = Window:AddTab('Misc'), Players = Window:AddTab('Players'), ['UI Settings'] = Window:AddTab('UI Settings') }
+if not Tabs.Players then
+    warn("[MAIN] Failed to create Tabs!")
+    return
+end
+print("[MAIN] Tabs created successfully")
+-- Add your remaining code here...
 local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
 local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
 local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()

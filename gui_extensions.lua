@@ -1,22 +1,23 @@
 -- gui_extensions.lua
 local Tabs = getfenv(0).Tabs -- Accède aux onglets définis dans main.lua
+local Services = game:GetService("Players") -- Utilisé pour trouver des joueurs
 
--- Utiliser le groupbox Player Actions existant dans l'onglet Players
+-- Vérifier et utiliser le groupbox Player Actions dans l'onglet Players
 if Tabs.Players and getgenv().PlayerActions then
-    -- Ajouter un bouton pour le ragebot
-    getgenv().PlayerActions:AddButton('Toggle Ragebot', function()
-        print("[GUI] Toggle Ragebot clicked!")
+    -- Ajouter un bouton pour activer le ragebot
+    getgenv().PlayerActions:AddButton('Activate Ragebot', function()
+        print("[GUI] Activate Ragebot clicked!")
         -- Logique à activer/désactiver le ragebot (à implémenter dans ragebot.lua)
     end)
 
     -- Ajouter un toggle pour activer/désactiver le ragebot
-    getgenv().PlayerActions:AddToggle('Ragebot Enabled', {
-        Text = "Ragebot Enabled",
+    getgenv().PlayerActions:AddToggle('Ragebot Active', {
+        Text = 'Ragebot Active',
         Default = false,
-        Callback = function(Value)
-            print("[GUI] Ragebot Enabled set to: " .. tostring(Value))
+        Callback = function(state)
+            print("[GUI] Ragebot Active set to: " .. tostring(state))
             -- Logique à implémenter dans ragebot.lua
-        end
+        end,
     })
 else
     warn("[GUI] PlayerActions groupbox not found in Tabs.Players!")

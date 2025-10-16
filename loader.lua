@@ -17,8 +17,12 @@ end
 
 -- Load key system
 local src, httpErr = game:HttpGet(REPO .. "key_system.lua")
-if not src or #src == 0 then
-    LocalPlayer:Kick("Sorry " .. username .. ", failed to load key store: " .. tostring(httpErr))
+print("[LOADER] Key system raw data: " .. tostring(src) .. ", Error: " .. tostring(httpErr or "None")) -- Debug log
+if not src then
+    LocalPlayer:Kick("Sorry " .. username .. ", failed to load key store: " .. tostring(httpErr or "Unknown error"))
+    return
+elseif #src == 0 then
+    LocalPlayer:Kick("Sorry " .. username .. ", key store file is empty!")
     return
 end
 local chunk, compileErr = loadstring(src)

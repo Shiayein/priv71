@@ -1,40 +1,114 @@
--- ragebot.lua
-local module = {}
-local ragebotActive = false
-local Services = game:GetService("Players")
+-- ==============================
+-- OPTIMIZED RAGEBOT SECTION
+-- ==============================
 
-function module.init()
-    print("[RAGEBOT] Ragebot module loaded!")
-    -- Vérifier les variables globales définies par gui_extensions.lua
-    if getgenv().PlayerActions then
-        -- Connecter le toggle Ragebot Active
-        local toggle = getgenv().PlayerActions:GetToggle("Ragebot Active")
-        if toggle then
-            toggle:OnChanged(function(state)
-                ragebotActive = state
-                print("[RAGEBOT] Ragebot toggled to: " .. tostring(ragebotActive))
-                -- Logique à implémenter ici
-            end)
-        else
-            warn("[RAGEBOT] Ragebot Active toggle not found!")
+-- == Helper functions ==
+local function ResetCamera()
+    local lp = Services.LocalPlayer
+    if lp and lp.Character then
+        local humanoid = lp.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            workspace.CurrentCamera.CameraSubject = humanoid
         end
-    else
-        warn("[RAGEBOT] PlayerActions not found, ragebot controls unavailable!")
     end
 end
 
--- Fonction placeholder pour le ragebot (à compléter)
-function module.update()
-    if ragebotActive then
-        -- Logique à implémenter : Détection des joueurs proches, attaque automatique, etc.
-        print("[RAGEBOT] Updating... (Logic not implemented yet)")
-        -- Exemple futur : Chercher un joueur cible et attaquer
+local function SetCameraToTarget()
+    local targetName = getgenv().SelectedRageTarget
+    if not targetName then return end
+    local target = Services.Players:FindFirstChild(targetName)
+    if target and target.Character then
+        local humanoid = target.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            workspace.CurrentCamera.CameraSubject = humanoid
+        end
     end
 end
 
--- Lancer une mise à jour périodique (à activer plus tard)
-game:GetService("RunService").Heartbeat:Connect(function()
-    module.update()
-end)
+local function UpdatePlayerList()
+    local names = {}
+    for _, plr in pairs(Services.Players:GetPlayers()) do
+        table.insert(names, plr.Name)
+    end
+    if Options and Options.RageTarget then
+        Options.RageTarget.Values = names
+    end
+end
 
-return module
+-- == GUI ==
+getgenv().RagebotBox = Tabs.Players:AddRightGroupbox('Ragebot')
+
+getgenv().RagebotBox:AddToggle('RagebotToggle', {
+    Text = 'Enable Ragebot',
+    Default = false,
+    Callback = function(state)
+        getgenv().RagebotEnabled = state
+        if state and getgenv().RagebotViewEnabled then
+            SetCameraToTarget()
+        else
+            ResetCamera()
+        end
+    end
+}):AddKeyPicker('RagebotKey', {
+    Default = 'R',
+    Text = 'Ragebot Key',
+    Mode = 'Toggle',
+    Callback = function(state)
+        if UserInputService:GetFocusedTextBox() then return end
+        getgenv().RagebotEnabled = state
+        if state and getgenv().RagebotViewEnabled then
+            SetCameraToTarget()
+        else
+            ResetCamera()
+        end
+    end
+})
+
+getgenv().RagebotDropdown = getgenv().RagebotBox:AddDropdown('RageTarget', {
+    SpecialType = 'Player',
+    Text = 'Select Ragebot Target',
+    Tooltip = 'Select a player to lock the view on when Ragebot is active.',
+    Callback = function(value)
+        getgenv().SelectedRageTarget = value
+        if getgenv().RagebotEnabled and getgenv().RagebotViewEnabled then
+            SetCameraToTarget()
+        end
+    end,
+})
+
+getgenv().RagebotBox:AddToggle('RagebotView', {
+    Text = 'View Target',
+    Default = false,
+    Callback = function(state)
+        getgenv().RagebotViewEnabled = state
+        if not state then
+            ResetCamera()
+            if getgenv().RagebotThread then
+                task.cancel(getgenv().RagebotThread)
+                getgenv().RagebotThread = nil
+            end
+            return
+        end
+
+        -- cancel previous thread safely
+        if getgenv().RagebotThread then
+            task.cancel(getgenv().RagebotThread)
+        end
+
+        -- start one single persistent thread
+        getgenv().RagebotThread = task.spawn(function()
+            while getgenv().RagebotViewEnabled do
+                if getgenv().RagebotEnabled then
+                    SetCameraToTarget()
+                end
+                task.wait(0.2)
+            end
+            ResetCamera()
+        end)
+    end,
+})
+
+-- == Auto refresh player list ==
+Services.Players.PlayerAdded:Connect(UpdatePlayerList)
+Services.Players.PlayerRemoving:Connect(UpdatePlayerList)
+UpdatePlayerList()

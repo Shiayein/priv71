@@ -4325,6 +4325,206 @@ end)
 getgenv().AllPlayerActions = Tabs.Players:AddRightGroupbox('All Player Actions')
 
 
+--[[====================================================
+📦 SCRIPT UNIQUE DE CAPTURE DE CFRAME SERVEUR
+Place ce script dans ServerScriptService.
+
+➡️ Fonctionne automatiquement :
+   - Crée les RemoteEvents nécessaires
+   - Côté serveur : capture les vrais CFrame
+   - Côté client : affiche une interface complète
+   - Tu peux copier les CFrame capturées directement
+====================================================]]--
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+-- =====================================================
+-- 🛰️ CREATION AUTOMATIQUE DES REMOTEEVENTS
+-- =====================================================
+local startEvent = Instance.new("RemoteEvent")
+startEvent.Name = "StartCFrameCapture"
+startEvent.Parent = ReplicatedStorage
+
+local stopEvent = Instance.new("RemoteEvent")
+stopEvent.Name = "StopCFrameCapture"
+stopEvent.Parent = ReplicatedStorage
+
+local sendEvent = Instance.new("RemoteEvent")
+sendEvent.Name = "SendCapturedFrames"
+sendEvent.Parent = ReplicatedStorage
+
+-- =====================================================
+-- 🧠 PARTIE SERVEUR : capture des vrais CFrame
+-- =====================================================
+local activeSessions = {}
+local captureInterval = 0.1 -- secondes entre captures
+
+local function startCapture(player)
+	local char = player.Character or player.CharacterAdded:Wait()
+	local root = char:WaitForChild("HumanoidRootPart", 5)
+	if not root then return end
+
+	if activeSessions[player] then
+		warn(player.Name .. " enregistre déjà.")
+		return
+	end
+
+	activeSessions[player] = {
+		frames = {},
+		last = tick(),
+		conn = nil
+	}
+
+	local session = activeSessions[player]
+	print("▶ Capture serveur démarrée pour", player.Name)
+
+	session.conn = RunService.Heartbeat:Connect(function()
+		if not char or not root or not root.Parent then return end
+		if tick() - session.last >= captureInterval then
+			session.last = tick()
+			table.insert(session.frames, root.CFrame)
+		end
+	end)
+end
+
+local function stopCapture(player)
+	local session = activeSessions[player]
+	if not session then return end
+
+	if session.conn then
+		session.conn:Disconnect()
+	end
+
+	print(("⏹ Capture arrêtée pour %s (%d frames)")
+		:format(player.Name, #session.frames))
+
+	local serialized = {}
+	for _, cf in ipairs(session.frames) do
+		table.insert(serialized, tostring(cf))
+	end
+
+	sendEvent:FireClient(player, serialized)
+	activeSessions[player] = nil
+end
+
+startEvent.OnServerEvent:Connect(startCapture)
+stopEvent.OnServerEvent:Connect(stopCapture)
+
+-- =====================================================
+-- 🎨 PARTIE CLIENT (GUI + logique)
+-- =====================================================
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Wait()
+
+	local localScript = Instance.new("LocalScript")
+	localScript.Name = "ClientCFrameRecorder"
+
+	localScript.Source = [[
+		local ReplicatedStorage = game:GetService("ReplicatedStorage")
+		local player = game.Players.LocalPlayer
+
+		local startEvent = ReplicatedStorage:WaitForChild("StartCFrameCapture")
+		local stopEvent = ReplicatedStorage:WaitForChild("StopCFrameCapture")
+		local sendEvent = ReplicatedStorage:WaitForChild("SendCapturedFrames")
+
+		-- UI
+		local gui = Instance.new("ScreenGui")
+		gui.Name = "CFrameRecorder"
+		gui.ResetOnSpawn = false
+		gui.Parent = player:WaitForChild("PlayerGui")
+
+		local function makeButton(name, text, pos)
+			local b = Instance.new("TextButton")
+			b.Name = name
+			b.Size = UDim2.new(0,140,0,40)
+			b.Position = pos
+			b.Text = text
+			b.Font = Enum.Font.SourceSansBold
+			b.TextSize = 18
+			b.Parent = gui
+			return b
+		end
+
+		local recordBtn = makeButton("Record", "🎬 Enregistrer", UDim2.new(0,20,0,20))
+		local stopBtn   = makeButton("Stop", "⏹ Stop", UDim2.new(0,180,0,20))
+		local exportBtn = makeButton("Export", "📦 Exporter", UDim2.new(0,340,0,20))
+		local copyBtn   = makeButton("Copy", "📋 Copier", UDim2.new(0,500,0,20))
+
+		local box = Instance.new("TextBox")
+		box.Size = UDim2.new(0,620,0,300)
+		box.Position = UDim2.new(0,20,0,80)
+		box.TextWrapped = true
+		box.MultiLine = true
+		box.ClearTextOnFocus = false
+		box.Text = "-- En attente d’enregistrement --"
+		box.Font = Enum.Font.SourceSans
+		box.TextSize = 16
+		box.Parent = gui
+
+		local status = Instance.new("TextLabel")
+		status.Size = UDim2.new(0,400,0,30)
+		status.Position = UDim2.new(0,20,0,400)
+		status.Text = "Etat : prêt"
+		status.Font = Enum.Font.SourceSansBold
+		status.TextSize = 18
+		status.Parent = gui
+
+		local frames = {}
+
+		recordBtn.MouseButton1Click:Connect(function()
+			startEvent:FireServer()
+			status.Text = "Etat : enregistrement (serveur)..."
+		end)
+
+		stopBtn.MouseButton1Click:Connect(function()
+			stopEvent:FireServer()
+			status.Text = "Etat : arrêt demandé..."
+		end)
+
+		exportBtn.MouseButton1Click:Connect(function()
+			if #frames == 0 then
+				box.Text = "-- Aucune frame reçue --"
+				return
+			end
+
+			local lines = {}
+			table.insert(lines, "-- Export CFrame (serveur authentique)")
+			table.insert(lines, "local frames = {")
+			for _, s in ipairs(frames) do
+				table.insert(lines, "    " .. s .. ",")
+			end
+			table.insert(lines, "}")
+			table.insert(lines, "")
+			table.insert(lines, "-- Exemple d’utilisation :")
+			table.insert(lines, "for i, cf in ipairs(frames) do")
+			table.insert(lines, "    print(i, cf)")
+			table.insert(lines, "end")
+
+			box.Text = table.concat(lines, "\n")
+			status.Text = "Etat : export généré"
+		end)
+
+		copyBtn.MouseButton1Click:Connect(function()
+			local ok = pcall(function() setclipboard(box.Text) end)
+			if ok then
+				status.Text = "✅ Copié dans le presse-papier (Studio)"
+			else
+				status.Text = "⚠️ Copier manuellement ci-dessous"
+			end
+		end)
+
+		sendEvent.OnClientEvent:Connect(function(data)
+			frames = data
+			status.Text = ("Etat : %d CFrame reçues du serveur"):format(#frames)
+			box.Text = "-- Frames reçues, cliquez sur Exporter pour générer le code --"
+		end)
+	]]
+
+	localScript.Parent = player:WaitForChild("PlayerGui")
+end)
+
 
 
 

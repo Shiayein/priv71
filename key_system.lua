@@ -12,7 +12,8 @@ KeyStore.DEV_KEYS = {
 
 -- Key bindings with HWID and users (empty by default)
 KeyStore.KEYS = {
-  ["83TE-8IYQ-ES31-EFK6"] = { users = {}, hwid = "1B830866-70FD-4F14-9AF2-0603C4741363" } -- Your updated HWID
+  ["83TE-8IYQ-ES31-EFK6"] = { users = {}, hwid = "1B830866-70FD-4F14-9AF2-0603C4741373" } -- Your updated HWID
 }
 
 return KeyStore
+

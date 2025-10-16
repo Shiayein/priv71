@@ -30,12 +30,13 @@ local KeyStore = chunk()
 
 -- Key verification
 local script_key = _G.SCRIPT_KEY or "NO_KEY"
+print("[LOADER] Global SCRIPT_KEY value: " .. tostring(_G.SCRIPT_KEY)) -- Debug log
 print("[LOADER] Checking key: " .. script_key) -- Debug log
 local isValid = false
 for _, devKey in pairs(KeyStore.DEV_KEYS) do
     if devKey == script_key then
         isValid = true
-        print("[LOADER] Valid developer key found!")
+        print("[LOADER] Valid developer key found: " .. devKey)
         break
     end
 end
@@ -43,7 +44,7 @@ for key, data in pairs(KeyStore.KEYS) do
     if key == script_key then
         if #data.users == 0 or table.find(data.users, userId) then
             isValid = true
-            print("[LOADER] Valid key found for user or universal use!")
+            print("[LOADER] Valid key found for user or universal use: " .. key)
             if data.hwid and data.hwid ~= "" and data.hwid ~= hwid then
                 LocalPlayer:Kick("Sorry " .. username .. ", your HWID does not match the key!")
                 return
@@ -59,6 +60,7 @@ end
 
 -- Mark as loaded with loader
 _G.LOADED_WITH_LOADER = true
+print("[LOADER] Loader verification passed, loading scripts...")
 
 -- Load the main script
 local success, err = pcall(function()

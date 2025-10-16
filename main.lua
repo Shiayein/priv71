@@ -40,12 +40,13 @@ do
     end
     local KeyStore = chunk()
     local script_key = _G.SCRIPT_KEY or "NO_KEY"
-    print("[KEY] Checking key: " .. script_key)
-    print("[MAIN] Global SCRIPT_KEY value: " .. tostring(_G.SCRIPT_KEY))
+    print("[KEY] Checking key: " .. script_key) -- Debug log
+    print("[MAIN] Global SCRIPT_KEY value: " .. tostring(_G.SCRIPT_KEY)) -- Debug log
     local isValid = false
     for _, devKey in pairs(KeyStore.DEV_KEYS) do
         if devKey == script_key then
             isValid = true
+            print("[KEY] Valid developer key found!")
             break
         end
     end
@@ -53,6 +54,7 @@ do
         if key == script_key then
             if #data.users == 0 or table.find(data.users, userId) then
                 isValid = true
+                print("[KEY] Valid key found for user or universal use!")
                 if data.hwid and data.hwid ~= "" and data.hwid ~= hwid then
                     LocalPlayer:Kick("Sorry " .. username .. ", your HWID does not match the key!")
                     return
@@ -65,34 +67,16 @@ do
         LocalPlayer:Kick("Sorry " .. username .. ", invalid key detected!")
         return
     end
-    print("[MAIN] Key verification passed, starting script...")
-    print("[MAIN] Script initialized, proceeding to next steps...") -- Added to confirm continuation
-end
+    print("[MAIN] Key verification passed, starting script...") -- Debug log
 
--- Add the rest of your script here (e.g., LinoriaLib initialization, UI setup)
--- Example continuation (based on your truncated document):
-local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
-local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
-if not Library then
-    warn("[MAIN] Failed to load Library from LinoriaLib!")
-    return
+    -- Rest of the script (copy the remaining code here)
+    local function safe_mkdir()
+        if hasFS and not isfolder(FOLDER) then
+            pcall(makefolder, FOLDER)
+        end
+    end
+    -- ... (paste the rest of your original main.lua content here, e.g., from "local function read_saved_key()" onward)
 end
-print("[MAIN] Library loaded successfully")
-local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
-local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
-local Window = Library:CreateWindow({ Title = '                     priv71  .GG/TRACED                    ', AutoShow = true, TabPadding = 15, MenuFadeTime = 0.2 })
-if not Window then
-    warn("[MAIN] Failed to create Window!")
-    return
-end
-print("[MAIN] Window created successfully")
-local Tabs = { Main = Window:AddTab('Main'), Character = Window:AddTab('Character'), Visuals = Window:AddTab('Visuals'), Misc = Window:AddTab('Misc'), Players = Window:AddTab('Players'), ['UI Settings'] = Window:AddTab('UI Settings') }
-if not Tabs.Players then
-    warn("[MAIN] Failed to create Tabs!")
-    return
-end
-print("[MAIN] Tabs created successfully")
--- Add your remaining code here...
 local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
 local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
 local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()

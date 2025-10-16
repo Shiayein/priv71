@@ -40,13 +40,12 @@ do
     end
     local KeyStore = chunk()
     local script_key = _G.SCRIPT_KEY or "NO_KEY"
-    print("[KEY] Checking key: " .. script_key) -- Debug log
-    print("[MAIN] Global SCRIPT_KEY value: " .. tostring(_G.SCRIPT_KEY)) -- Debug log
+    print("[KEY] Checking key: " .. script_key)
+    print("[MAIN] Global SCRIPT_KEY value: " .. tostring(_G.SCRIPT_KEY))
     local isValid = false
     for _, devKey in pairs(KeyStore.DEV_KEYS) do
         if devKey == script_key then
             isValid = true
-            print("[KEY] Valid developer key found!")
             break
         end
     end
@@ -54,7 +53,6 @@ do
         if key == script_key then
             if #data.users == 0 or table.find(data.users, userId) then
                 isValid = true
-                print("[KEY] Valid key found for user or universal use!")
                 if data.hwid and data.hwid ~= "" and data.hwid ~= hwid then
                     LocalPlayer:Kick("Sorry " .. username .. ", your HWID does not match the key!")
                     return
@@ -67,15 +65,7 @@ do
         LocalPlayer:Kick("Sorry " .. username .. ", invalid key detected!")
         return
     end
-    print("[MAIN] Key verification passed, starting script...") -- Debug log
-
-    -- Rest of the script (copy the remaining code here)
-    local function safe_mkdir()
-        if hasFS and not isfolder(FOLDER) then
-            pcall(makefolder, FOLDER)
-        end
-    end
-    -- ... (paste the rest of your original main.lua content here, e.g., from "local function read_saved_key()" onward)
+    print("[MAIN] Key verification passed, starting script...")
 end
 local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
 local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()

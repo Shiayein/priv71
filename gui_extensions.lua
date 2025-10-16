@@ -1,23 +1,24 @@
 -- gui_extensions.lua
 -- Add ragebot controls to the Players tab
 local Tabs = getfenv(0).Tabs -- Access tabs from main.lua environment
-local maxAttempts = 5 -- Limit the number of retry attempts
+local maxAttempts = 10 -- Increased number of retry attempts
 local attempt = 0
+local timeout = 2.0 -- Maximum wait time in seconds
 
--- Function to add ragebot controls with retry logic
+-- Function to add ragebot controls with timeout
 local function addRagebotControls()
     attempt = attempt + 1
-    if attempt > maxAttempts then
-        warn("[GUI] Failed to initialize ragebot controls after " .. maxAttempts .. " attempts!")
-        return
+    local startTime = tick()
+
+    while (not Tabs or not Tabs.Players or not getgenv().PlayerActions) and (tick() - startTime) < timeout do
+        warn("[GUI] Waiting for PlayerActions to be initialized... (Attempt " .. attempt .. " of " .. maxAttempts .. ")")
+        wait(0.2) -- Delay before next check
     end
 
     if not Tabs or not Tabs.Players or not getgenv().PlayerActions then
-        warn("[GUI] Waiting for PlayerActions to be initialized... (Attempt " .. attempt .. " of " .. maxAttempts .. ")")
-        wait(0.2) -- Delay before retry
-        addRagebotControls() -- Retry
+        warn("[GUI] Failed to initialize ragebot controls after " .. timeout .. " seconds and " .. attempt .. " attempts!")
         return
-    end
+    }
 
     -- Add a button to activate the ragebot
     getgenv().PlayerActions:AddButton('Activate Ragebot', function()

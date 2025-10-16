@@ -4323,6 +4323,184 @@ getgenv().PlayerActions:AddButton('Stop', function()
 end)
 
 getgenv().AllPlayerActions = Tabs.Players:AddRightGroupbox('All Player Actions')
+-- Ragebot Section (Player List + View + Keybind)
+print("[Ragebot] Initializing...")
+getgenv().RagebotBox = Tabs.Players:AddRightGroupbox('Ragebot')
+
+-- Initialize global variables
+getgenv().RagebotEnabled = false
+getgenv().RagebotViewEnabled = false
+getgenv().SelectedRageTarget = nil
+
+-- Main toggle + keybind
+getgenv().RagebotBox:AddToggle('RagebotToggle', {
+    Text = 'Enable Ragebot',
+    Default = false,
+    Tooltip = 'Enable or disable the Ragebot functionality.',
+    Callback = function(state)
+        getgenv().RagebotEnabled = state
+        if not state then
+            getgenv().RagebotViewEnabled = false
+            if getgenv().Services.LocalPlayer.Character then
+                workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            end
+            Library:Notify("Ragebot disabled.", 3)
+        elseif getgenv().RagebotViewEnabled and getgenv().SelectedRageTarget then
+            local targetPlayer = getgenv().Services.Players:FindFirstChild(getgenv().SelectedRageTarget)
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
+                workspace.CurrentCamera.CameraSubject = targetPlayer.Character.Humanoid
+                Library:Notify("Ragebot enabled, viewing target: " .. getgenv().SelectedRageTarget, 3)
+            else
+                getgenv().RagebotViewEnabled = false
+                Library:Notify("No valid target selected for Ragebot View!", 3)
+            end
+        else
+            Library:Notify("Ragebot enabled.", 3)
+        end
+        print("[Ragebot] Toggle state:", state)
+    end
+}):AddKeyPicker('RagebotKey', {
+    Default = 'R',
+    Text = 'Ragebot Key',
+    Mode = 'Toggle',
+    Tooltip = 'Keybind to toggle Ragebot.',
+    Callback = function(state)
+        if getgenv().Services.UserInputService:GetFocusedTextBox() then return end
+        getgenv().RagebotEnabled = state
+        if not state then
+            getgenv().RagebotViewEnabled = false
+            if getgenv().Services.LocalPlayer.Character then
+                workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            end
+            Library:Notify("Ragebot disabled via keybind.", 3)
+        elseif getgenv().RagebotViewEnabled and getgenv().SelectedRageTarget then
+            local targetPlayer = getgenv().Services.Players:FindFirstChild(getgenv().SelectedRageTarget)
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
+                workspace.CurrentCamera.CameraSubject = targetPlayer.Character.Humanoid
+                Library:Notify("Ragebot enabled via keybind, viewing target: " .. getgenv().SelectedRageTarget, 3)
+            else
+                getgenv().RagebotViewEnabled = false
+                Library:Notify("No valid target selected for Ragebot View!", 3)
+            end
+        else
+            Library:Notify("Ragebot enabled via keybind.", 3)
+        end
+        print("[Ragebot] Keybind state:", state)
+    end
+})
+
+-- Dropdown: list of all players
+getgenv().RagebotDropdown = getgenv().RagebotBox:AddDropdown('RageTarget', {
+    SpecialType = 'Player',
+    Text = 'Select Ragebot Target',
+    Tooltip = 'Select a player to lock the view on when Ragebot is active.',
+    Callback = function(value)
+        getgenv().SelectedRageTarget = value
+        if getgenv().RagebotEnabled and getgenv().RagebotViewEnabled then
+            local targetPlayer = getgenv().Services.Players:FindFirstChild(value)
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
+                workspace.CurrentCamera.CameraSubject = targetPlayer.Character.Humanoid
+                Library:Notify("Ragebot target set to: " .. value, 3)
+            else
+                getgenv().RagebotViewEnabled = false
+                if getgenv().Services.LocalPlayer.Character then
+                    workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                end
+                Library:Notify("Invalid Ragebot target: " .. value, 3)
+            end
+        end
+        print("[Ragebot] Selected target:", value)
+    end
+})
+
+-- View toggle (only works when Ragebot is enabled)
+getgenv().RagebotBox:AddToggle('RagebotView', {
+    Text = 'View Target',
+    Default = false,
+    Tooltip = 'Lock camera on the selected Ragebot target.',
+    Callback = function(state)
+        getgenv().RagebotViewEnabled = state
+        if not getgenv().RagebotEnabled then
+            getgenv().RagebotViewEnabled = false
+            if getgenv().Services.LocalPlayer.Character then
+                workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            end
+            Library:Notify("Ragebot View disabled: Ragebot is not enabled.", 3)
+            return
+        end
+        if state and getgenv().SelectedRageTarget then
+            local targetPlayer = getgenv().Services.Players:FindFirstChild(getgenv().SelectedRageTarget)
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
+                workspace.CurrentCamera.CameraSubject = targetPlayer.Character.Humanoid
+                Library:Notify("Viewing Ragebot target: " .. getgenv().SelectedRageTarget, 3)
+            else
+                getgenv().RagebotViewEnabled = false
+                if getgenv().Services.LocalPlayer.Character then
+                    workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                end
+                Library:Notify("No valid target selected for Ragebot View!", 3)
+            end
+        else
+            if getgenv().Services.LocalPlayer.Character then
+                workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            end
+            Library:Notify("Ragebot View disabled.", 3)
+        end
+        print("[Ragebot] View state:", state)
+    end
+})
+
+-- Auto-refresh player list when someone joins/leaves
+getgenv().Services.Players.PlayerAdded:Connect(function()
+    local names = {}
+    for _, plr in pairs(getgenv().Services.Players:GetPlayers()) do
+        table.insert(names, plr.Name)
+    end
+    pcall(function()
+        getgenv().RagebotDropdown:SetValues(names)
+        print("[Ragebot] Player list updated on join:", table.concat(names, ", "))
+    end)
+end)
+
+getgenv().Services.Players.PlayerRemoving:Connect(function()
+    local names = {}
+    for _, plr in pairs(getgenv().Services.Players:GetPlayers()) do
+        table.insert(names, plr.Name)
+    end
+    pcall(function()
+        getgenv().RagebotDropdown:SetValues(names)
+        if getgenv().SelectedRageTarget and not getgenv().Services.Players:FindFirstChild(getgenv().SelectedRageTarget) then
+            getgenv().SelectedRageTarget = nil
+            getgenv().RagebotViewEnabled = false
+            if getgenv().Services.LocalPlayer.Character then
+                workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            end
+            Library:Notify("Selected player left the game, resetting Ragebot target.", 3)
+        end
+        print("[Ragebot] Player list updated on leave:", table.concat(names, ", "))
+    end)
+end)
+
+-- Camera update loop for smooth tracking
+task.spawn(function()
+    while true do
+        if getgenv().RagebotEnabled and getgenv().RagebotViewEnabled and getgenv().SelectedRageTarget then
+            local targetPlayer = getgenv().Services.Players:FindFirstChild(getgenv().SelectedRageTarget)
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
+                workspace.CurrentCamera.CameraSubject = targetPlayer.Character.Humanoid
+            else
+                getgenv().RagebotViewEnabled = false
+                if getgenv().Services.LocalPlayer.Character then
+                    workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                end
+                Library:Notify("Ragebot target is invalid, disabling view.", 3)
+            end
+        end
+        task.wait(0.1)
+    end
+end)
+
+print("[Ragebot] Initialized successfully")--fin
 
 getgenv().ShopFolder = Workspace:WaitForChild("Ignored"):WaitForChild("Shop")
 getgenv().OriginalPosition = nil

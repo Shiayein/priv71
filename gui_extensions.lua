@@ -2,8 +2,15 @@
 -- Add ragebot controls to the Players tab
 local Tabs = getfenv(0).Tabs -- Access tabs from main.lua environment
 
--- Check and use the PlayerActions groupbox in the Players tab
-if Tabs.Players and getgenv().PlayerActions then
+-- Wait for PlayerActions to be available
+local function addRagebotControls()
+    if not Tabs or not Tabs.Players or not getgenv().PlayerActions then
+        warn("[GUI] Waiting for PlayerActions to be initialized...")
+        wait(0.2) -- Increase delay to ensure initialization
+        addRagebotControls() -- Retry
+        return
+    end
+
     -- Add a button to activate the ragebot
     getgenv().PlayerActions:AddButton('Activate Ragebot', function()
         print("[GUI] Activate Ragebot clicked!")
@@ -19,22 +26,7 @@ if Tabs.Players and getgenv().PlayerActions then
             -- Logic to be implemented in ragebot.lua
         end,
     })
-else
-    warn("[GUI] PlayerActions groupbox not found in Tabs.Players! Waiting for main.lua initialization...")
-    -- Optional delay to wait for main.lua to initialize Tabs
-    wait(0.1) -- Small delay to allow Tabs to be set
-    if Tabs.Players and getgenv().PlayerActions then
-        getgenv().PlayerActions:AddButton('Activate Ragebot', function()
-            print("[GUI] Activate Ragebot clicked!")
-        end)
-        getgenv().PlayerActions:AddToggle('Ragebot Active', {
-            Text = 'Ragebot Active',
-            Default = false,
-            Callback = function(state)
-                print("[GUI] Ragebot Active set to: " .. tostring(state))
-            end,
-        })
-    else
-        warn("[GUI] Failed to initialize ragebot controls after delay!")
-    end
 end
+
+-- Call the function to add controls
+addRagebotControls()

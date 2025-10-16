@@ -61,7 +61,12 @@ end
 _G.LOADED_WITH_LOADER = true
 
 -- Load the main script
-loadstring(game:HttpGet(REPO .. "main.lua"))()
+local success, err = pcall(function()
+    loadstring(game:HttpGet(REPO .. "main.lua"))()
+end)
+if not success then
+    print("[LOADER] Error loading main.lua: " .. tostring(err))
+end
 
 -- Load additional future scripts (example folder or URLs)
 local additionalScripts = {

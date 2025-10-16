@@ -5,7 +5,7 @@ if not _G.LOADED_WITH_LOADER then
     local Players = game:GetService("Players")
     local LocalPlayer = Players.LocalPlayer
     local username = LocalPlayer and LocalPlayer.Name or "Unknown"
-    LocalPlayer:Kick("FUck you " .. username .. ", ez skidder :3!")
+    LocalPlayer:Kick("Fuck YoU " .. username .. ", ez skidder :3!")
     return
 end
 

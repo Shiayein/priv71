@@ -1,5 +1,5 @@
 -- loader.lua
-local REPO = "https://raw.githubusercontent.com/Shiayein/ImmortalFarm/main/"
+local REPO = "https://raw.githubusercontent.com/Shiayein/priv71/refs/heads/main/"
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local userId = LocalPlayer and LocalPlayer.UserId or 0
@@ -70,8 +70,8 @@ end
 
 -- Load additional future scripts (example folder or URLs)
 local additionalScripts = {
-    "https://raw.githubusercontent.com/Shiayein/ImmortalFarm/main/scripts/future_script1.lua", -- Example URL
-    "https://raw.githubusercontent.com/Shiayein/ImmortalFarm/main/scripts/future_script2.lua"  -- Add more as needed
+    "https://raw.githubusercontent.com/Shiayein/priv71/refs/heads/main/scripts/future_script1.lua", -- Example URL
+    "https://raw.githubusercontent.com/Shiayein/priv71/refs/heads/main/scripts/future_script2.lua"  -- Add more as needed
 }
 
 for _, scriptUrl in pairs(additionalScripts) do

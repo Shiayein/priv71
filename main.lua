@@ -4328,14 +4328,35 @@ getgenv().AllPlayerActions = Tabs.Players:AddRightGroupbox('All Player Actions')
 -- Ragebot Section (Player List + View + Keybind)
 getgenv().RagebotBox = Tabs.Players:AddRightGroupbox('Ragebot')
 
+-- State variables
+local initialPosition = nil
+local ragebotEnabled = false
+local ragebotViewEnabled = false
+local selectedRageTarget = nil
+
 -- Main toggle + keybind
 getgenv().RagebotBox:AddToggle('RagebotToggle', {
     Text = 'Enable Ragebot',
     Default = false,
     Callback = function(state)
-        getgenv().RagebotEnabled = state
-        if not state then
+        ragebotEnabled = state
+        if state and not initialPosition then
+            local character = Services.LocalPlayer.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                initialPosition = character.HumanoidRootPart.CFrame
+            end
+        end
+        if not state and initialPosition then
+            local character = Services.LocalPlayer.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                character.HumanoidRootPart.CFrame = initialPosition
+            end
             workspace.CurrentCamera.CameraSubject = Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        end
+        if state and ragebotViewEnabled then
+            startCameraLoop()
+        elseif not state then
+            stopCameraLoop()
         end
     end
 }):AddKeyPicker('RagebotKey', {
@@ -4344,9 +4365,24 @@ getgenv().RagebotBox:AddToggle('RagebotToggle', {
     Mode = 'Toggle',
     Callback = function(state)
         if UserInputService:GetFocusedTextBox() then return end
-        getgenv().RagebotEnabled = state
-        if not state then
+        ragebotEnabled = state
+        if state and not initialPosition then
+            local character = Services.LocalPlayer.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                initialPosition = character.HumanoidRootPart.CFrame
+            end
+        end
+        if not state and initialPosition then
+            local character = Services.LocalPlayer.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                character.HumanoidRootPart.CFrame = initialPosition
+            end
             workspace.CurrentCamera.CameraSubject = Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        end
+        if state and ragebotViewEnabled then
+            startCameraLoop()
+        elseif not state then
+            stopCameraLoop()
         end
     end
 })
@@ -4357,34 +4393,101 @@ getgenv().RagebotDropdown = getgenv().RagebotBox:AddDropdown('RageTarget', {
     Text = 'Select Ragebot Target',
     Tooltip = 'Select a player to lock the view on when Ragebot is active.',
     Callback = function(value)
-        getgenv().SelectedRageTarget = value
+        selectedRageTarget = value
+        if ragebotEnabled then
+            updateTeleport()
+        end
     end,
 })
 
--- View toggle (only works when Ragebot is enabled)
+-- View toggle (smooth transition when already enabled)
 getgenv().RagebotBox:AddToggle('RagebotView', {
     Text = 'View Target',
     Default = false,
     Callback = function(state)
-        getgenv().RagebotViewEnabled = state
-
-        if not state then
+        ragebotViewEnabled = state
+        if state and ragebotEnabled then
+            startCameraLoop()
+            updateTeleport() -- Start teleport if enabled
+        elseif not state and ragebotEnabled then
+            stopCameraLoop()
+            if initialPosition then
+                local character = Services.LocalPlayer.Character
+                if character and character:FindFirstChild("HumanoidRootPart") then
+                    character.HumanoidRootPart.CFrame = initialPosition
+                end
+            end
+        elseif not state and not ragebotEnabled then
             workspace.CurrentCamera.CameraSubject = Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            return
         end
+    end,
+})
 
-        task.spawn(function()
-            while getgenv().RagebotViewEnabled and getgenv().RagebotEnabled do
-                local targetPlayer = Services.Players:FindFirstChild(getgenv().SelectedRageTarget)
-                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
-                    workspace.CurrentCamera.CameraSubject = targetPlayer.Character.Humanoid
+-- Single persistent updater loop
+local cameraLoop
+local function startCameraLoop()
+    if not cameraLoop then
+        cameraLoop = task.spawn(function()
+            while true do
+                if ragebotEnabled and ragebotViewEnabled and selectedRageTarget then
+                    local targetPlayer = Services.Players:FindFirstChild(selectedRageTarget)
+                    if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
+                        workspace.CurrentCamera.CameraSubject = targetPlayer.Character.Humanoid
+                    end
                 end
                 task.wait(0.1)
             end
-            workspace.CurrentCamera.CameraSubject = Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
         end)
-    end,
-})
+    end
+end
+
+local function stopCameraLoop()
+    if cameraLoop then
+        task.cancel(cameraLoop)
+        cameraLoop = nil
+    end
+end
+
+-- Dynamic teleport function
+local function updateTeleport()
+    if ragebotEnabled and selectedRageTarget then
+        local targetPlayer = Services.Players:FindFirstChild(selectedRageTarget)
+        local character = Services.LocalPlayer.Character
+        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") and character and character:FindFirstChild("HumanoidRootPart") then
+            local targetPosition = targetPlayer.Character.HumanoidRootPart.CFrame + Vector3.new(0, 100, 0)
+            character.HumanoidRootPart.CFrame = targetPosition
+        end
+    end
+end
+
+-- Auto-refresh player list
+Services.Players.PlayerAdded:Connect(function()
+    local names = {}
+    for _, plr in pairs(Services.Players:GetPlayers()) do
+        table.insert(names, plr.Name)
+    end
+    Options.RageTarget.Values = names
+end)
+
+Services.Players.PlayerRemoving:Connect(function()
+    local names = {}
+    for _, plr in pairs(Services.Players:GetPlayers()) do
+        table.insert(names, plr.Name)
+    end
+    Options.RageTarget.Values = names
+end)
+
+-- Start teleport loop if enabled
+if ragebotEnabled then
+    spawn(function()
+        while true do
+            if ragebotEnabled and selectedRageTarget then
+                updateTeleport()
+            end
+            wait(0.1)
+        end
+    end)
+end
 
 
 

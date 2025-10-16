@@ -16,12 +16,21 @@ else
 end
 
 -- Load key system
-print("[LOADER] Attempting to load key_system.lua from: " .. REPO .. "key_system.lua")
-local src, httpErr = game:HttpGet(REPO .. "key_system.lua")
+print("[LOADER] Initiating HTTP request for key_system.lua from: " .. REPO .. "key_system.lua")
+local success, result = pcall(function()
+    return game:HttpGet(REPO .. "key_system.lua")
+end)
+if not success then
+    warn("[LOADER] HTTP request failed for key_system.lua: " .. tostring(result))
+    LocalPlayer:Kick("Sorry " .. username .. ", failed to load key store: HTTP error - " .. tostring(result))
+    return
+end
+local src = result
+local httpErr = nil
 print("[LOADER] Key system raw data: " .. tostring(src) .. ", Error: " .. tostring(httpErr or "None"))
 if not src then
-    warn("[LOADER] Failed to load key_system.lua: " .. tostring(httpErr or "Unknown error"))
-    LocalPlayer:Kick("Sorry " .. username .. ", failed to load key store: " .. tostring(httpErr or "Unknown error"))
+    warn("[LOADER] No data received from key_system.lua")
+    LocalPlayer:Kick("Sorry " .. username .. ", failed to load key store: No data received")
     return
 elseif #src == 0 then
     warn("[LOADER] Key system file is empty!")

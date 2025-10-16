@@ -71,14 +71,6 @@ if not success then
     print("[LOADER] Error loading main.lua: " .. tostring(err))
 end
 
--- Load GUI extensions for Players tab
-local success, err = pcall(function()
-    loadstring(game:HttpGet(REPO .. "gui_extensions.lua"))()
-end)
-if not success then
-    warn("[LOADER] Failed to load GUI extensions: " .. tostring(err))
-end
-
 -- Load ragebot script for Players tab
 local success, err = pcall(function()
     loadstring(game:HttpGet(REPO .. "ragebot.lua"))()

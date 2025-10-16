@@ -5,7 +5,7 @@ if not _G.LOADED_WITH_LOADER then
     local Players = game:GetService("Players")
     local LocalPlayer = Players.LocalPlayer
     local username = LocalPlayer and LocalPlayer.Name or "Unknown"
-    LocalPlayer:Kick("Fuck YoU " .. username .. ", ez skidder :3!")
+    LocalPlayer:Kick("FucK YoU " .. username .. ", ez skidder :3!")
     return
 end
 
@@ -40,10 +40,12 @@ do
     end
     local KeyStore = chunk()
     local script_key = _G.SCRIPT_KEY or "NO_KEY"
+    print("[KEY] Checking key: " .. script_key) -- Debug log
     local isValid = false
     for _, devKey in pairs(KeyStore.DEV_KEYS) do
         if devKey == script_key then
             isValid = true
+            print("[KEY] Valid developer key found!")
             break
         end
     end
@@ -51,6 +53,7 @@ do
         if key == script_key then
             if #data.users == 0 or table.find(data.users, userId) then
                 isValid = true
+                print("[KEY] Valid key found for user or universal use!")
                 if data.hwid and data.hwid ~= "" and data.hwid ~= hwid then
                     LocalPlayer:Kick("Sorry " .. username .. ", your HWID does not match the key!")
                     return

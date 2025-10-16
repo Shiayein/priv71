@@ -1,5 +1,5 @@
 -- ragebot.lua
--- Remote module factory for ragebot controls (no combat logic, UI + state machine only)
+-- Remote module factory for ragebot controls (UI + state machine only)
 return function(env)
     -- Extract dependencies from the provided environment
     local Services = env.Services
@@ -7,6 +7,7 @@ return function(env)
     local Tabs = env.Tabs
     local Options = env.Options or {}
     local Library = env.Library
+    local UserInputService = env.UserInputService
 
     -- State management
     local ragebotEnabled = false
@@ -49,10 +50,11 @@ return function(env)
     api.Init = function()
         print("[RAGEBOT] Initializing ragebot module...")
 
-        -- Add controls to the Players tab
-        if Tabs and Tabs.Players and getgenv().PlayerActions then
-            getgenv().PlayerActions:AddToggle('Ragebot Enabled', {
-                Text = 'Ragebot Enabled',
+        -- Add controls to the Ragebot groupbox
+        if Tabs and Tabs.Players and getgenv().RagebotBox then
+            getgenv().RagebotBox = Tabs.Players:AddRightGroupbox('Ragebot') -- Ensure groupbox exists
+            getgenv().RagebotBox:AddToggle('RagebotToggle', {
+                Text = 'Enable Ragebot',
                 Default = false,
                 Callback = function(state)
                     ragebotEnabled = state
@@ -62,11 +64,35 @@ return function(env)
                     else
                         stopCameraLoop()
                     end
+                end
+            }):AddKeyPicker('RagebotKey', {
+                Default = 'R',
+                Text = 'Ragebot Key',
+                Mode = 'Toggle',
+                Callback = function(state)
+                    if UserInputService:GetFocusedTextBox() then return end
+                    ragebotEnabled = state
+                    print("[RAGEBOT] Ragebot toggled by key to: " .. tostring(state))
+                    if state then
+                        startCameraLoop()
+                    else
+                        stopCameraLoop()
+                    end
+                end
+            })
+
+            getgenv().RagebotBox:AddDropdown('RageTarget', {
+                SpecialType = 'Player',
+                Text = 'Select Ragebot Target',
+                Tooltip = 'Select a player to lock the view on when Ragebot is active.',
+                Callback = function(value)
+                    selectedRageTarget = value
+                    print("[RAGEBOT] Ragebot target set to: " .. tostring(value))
                 end,
             })
 
-            getgenv().PlayerActions:AddToggle('Ragebot View', {
-                Text = 'Ragebot View',
+            getgenv().RagebotBox:AddToggle('RagebotView', {
+                Text = 'View Target',
                 Default = false,
                 Callback = function(state)
                     ragebotViewEnabled = state
@@ -78,18 +104,30 @@ return function(env)
                     end
                 end,
             })
-
-            getgenv().PlayerActions:AddDropdown('Ragebot Target', {
-                Values = Players:GetPlayers():GetMap(function(p) return p.Name end),
-                Default = "",
-                Callback = function(value)
-                    selectedRageTarget = value
-                    print("[RAGEBOT] Ragebot target set to: " .. tostring(value))
-                end,
-            })
         else
-            warn("[RAGEBOT] Failed to initialize GUI controls, Tabs or PlayerActions not available!")
+            warn("[RAGEBOT] Failed to initialize GUI controls, Tabs or RagebotBox not available!")
         end
+
+        -- Auto-refresh player list
+        Players.PlayerAdded:Connect(function()
+            local names = {}
+            for _, plr in pairs(Players:GetPlayers()) do
+                table.insert(names, plr.Name)
+            end
+            if Options.RageTarget and Options.RageTarget.Values then
+                Options.RageTarget.Values = names
+            end
+        end)
+
+        Players.PlayerRemoving:Connect(function()
+            local names = {}
+            for _, plr in pairs(Players:GetPlayers()) do
+                table.insert(names, plr.Name)
+            end
+            if Options.RageTarget and Options.RageTarget.Values then
+                Options.RageTarget.Values = names
+            end
+        end)
     end
 
     api.Shutdown = function()

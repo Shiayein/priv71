@@ -4324,6 +4324,52 @@ end)
 
 getgenv().AllPlayerActions = Tabs.Players:AddRightGroupbox('All Player Actions')
 
+-- main.lua (add All Player Actions and ragebot loader)
+getgenv().AllPlayerActions = Tabs.Players:AddRightGroupbox('All Player Actions')
+
+-- Load remote ragebot module
+print("[MAIN] Loading remote ragebot module...")
+local REPO = "https://raw.githubusercontent.com/Shiayein/priv71/refs/heads/main/"
+local url = REPO .. "ragebot.lua"
+local ok, txt = pcall(function() return game:HttpGet(url, true) end)
+if ok and txt and txt ~= "" then
+    local fn, err = loadstring(txt)
+    if not fn then
+        warn("[MAIN] Compile error for ragebot.lua: " .. tostring(err))
+    else
+        local success, ret = pcall(fn)
+        if not success then
+            warn("[MAIN] Runtime error for ragebot.lua: " .. tostring(ret))
+        elseif type(ret) == "function" then
+            local instance = ret({
+                Services = game,
+                Tabs = Tabs,
+                Options = Options,
+                Library = Library,
+                UserInputService = UserInputService
+            })
+            if instance and type(instance.Init) == "function" then
+                instance.Init()
+                getgenv()._RagebotInstance = instance
+            else
+                warn("[MAIN] Invalid ragebot module instance returned!")
+            end
+        else
+            warn("[MAIN] Ragebot.lua did not return a function!")
+        end
+    end
+else
+    warn("[MAIN] Failed to fetch ragebot.lua: " .. tostring(txt or "No data"))
+end
+
+-- Rest of the original script (e.g., CFrame recorder or other code)
+
+
+
+
+
+
+
 getgenv().ShopFolder = Workspace:WaitForChild("Ignored"):WaitForChild("Shop")
 getgenv().OriginalPosition = nil
 getgenv().KillAllEnabled = false

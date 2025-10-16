@@ -31,6 +31,7 @@ if not chunk then
     return
 end
 local KeyStore = chunk()
+print("[LOADER] Loaded KeyStore: " .. tostring(KeyStore)) -- Debug log
 
 -- Key verification
 local script_key = _G.SCRIPT_KEY or "NO_KEY"
@@ -45,7 +46,9 @@ for _, devKey in pairs(KeyStore.DEV_KEYS) do
     end
 end
 for key, data in pairs(KeyStore.KEYS) do
+    print("[LOADER] Checking key pair: " .. key .. ", data: " .. tostring(data)) -- Debug log
     if key == script_key then
+        if not data.users then data.users = {} end -- Default to empty table if nil
         if #data.users == 0 or table.find(data.users, userId) then
             isValid = true
             print("[LOADER] Valid key found for user or universal use: " .. key)

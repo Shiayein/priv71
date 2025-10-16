@@ -1,7 +1,4 @@
 -- loader.lua
-script_key = "PUT KEY HERE" -- Your requested start
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Shiayein/ImmortalFarm/main/main.lua"))()
-
 local REPO = "https://raw.githubusercontent.com/Shiayein/ImmortalFarm/main/"
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -32,12 +29,13 @@ end
 local KeyStore = chunk()
 
 -- Key verification
-local script_key = "83TE-8IYQ-ES31-EFK6" -- Your key
-_G.SCRIPT_KEY = script_key
+local script_key = _G.SCRIPT_KEY or "NO_KEY"
+print("[LOADER] Checking key: " .. script_key) -- Debug log
 local isValid = false
 for _, devKey in pairs(KeyStore.DEV_KEYS) do
     if devKey == script_key then
         isValid = true
+        print("[LOADER] Valid developer key found!")
         break
     end
 end
@@ -45,6 +43,7 @@ for key, data in pairs(KeyStore.KEYS) do
     if key == script_key then
         if #data.users == 0 or table.find(data.users, userId) then
             isValid = true
+            print("[LOADER] Valid key found for user or universal use!")
             if data.hwid and data.hwid ~= "" and data.hwid ~= hwid then
                 LocalPlayer:Kick("Sorry " .. username .. ", your HWID does not match the key!")
                 return
@@ -60,6 +59,9 @@ end
 
 -- Mark as loaded with loader
 _G.LOADED_WITH_LOADER = true
+
+-- Load the main script
+loadstring(game:HttpGet(REPO .. "main.lua"))()
 
 -- Load additional future scripts (example folder or URLs)
 local additionalScripts = {

@@ -5,13 +5,13 @@ if not _G.LOADED_WITH_LOADER then
     local Players = game:GetService("Players")
     local LocalPlayer = Players.LocalPlayer
     local username = LocalPlayer and LocalPlayer.Name or "Unknown"
-    LocalPlayer:Kick("FucK YoU " .. username .. ", ez skidder :3!")
+    LocalPlayer:Kick("FocK YoU " .. username .. ", ez skidder :3!")
     return
 end
 
 -- === ImmortalFarm Key Check (top-of-file) ===
 do
-    local REPO = "https://raw.githubusercontent.com/Shiayein/ImmortalFarm/main/"
+    local REPO = "https://raw.githubusercontent.com/Shiayein/priv71/refs/heads/main/"
     local Players = game:GetService("Players")
     local LocalPlayer = Players.LocalPlayer
     local userId = LocalPlayer and LocalPlayer.UserId or 0
@@ -41,6 +41,7 @@ do
     local KeyStore = chunk()
     local script_key = _G.SCRIPT_KEY or "NO_KEY"
     print("[KEY] Checking key: " .. script_key) -- Debug log
+    print("[MAIN] Global SCRIPT_KEY value: " .. tostring(_G.SCRIPT_KEY)) -- Debug log
     local isValid = false
     for _, devKey in pairs(KeyStore.DEV_KEYS) do
         if devKey == script_key then
@@ -66,6 +67,7 @@ do
         LocalPlayer:Kick("Sorry " .. username .. ", invalid key detected!")
         return
     end
+    print("[MAIN] Key verification passed, starting script...") -- Debug log
 
     -- Rest of the script (copy the remaining code here)
     local function safe_mkdir()

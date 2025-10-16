@@ -3,6 +3,18 @@
 -- ==============================
 
 -- == Helper functions ==
+-- === SAFETY INIT ===
+local Services = Services or setmetatable({}, {
+    __index = function(_, service)
+        return game:GetService(service)
+    end
+})
+
+local Players = Services.Players
+local LocalPlayer = Players.LocalPlayer
+local UserInputService = Services.UserInputService
+local Workspace = Services.Workspace
+
 local function ResetCamera()
     local lp = Services.LocalPlayer
     if lp and lp.Character then

@@ -17,7 +17,6 @@ end
 
 -- Load key system
 local src, httpErr = game:HttpGet(REPO .. "key_system.lua")
-print("[LOADER] Key system raw data: " .. tostring(src) .. ", Error: " .. tostring(httpErr or "None")) -- Debug log
 if not src then
     LocalPlayer:Kick("Sorry " .. username .. ", failed to load key store: " .. tostring(httpErr or "Unknown error"))
     return
@@ -31,27 +30,22 @@ if not chunk then
     return
 end
 local KeyStore = chunk()
-print("[LOADER] Loaded KeyStore: " .. tostring(KeyStore)) -- Debug log
 
 -- Key verification
 local script_key = _G.SCRIPT_KEY or "NO_KEY"
-print("[LOADER] Global SCRIPT_KEY value: " .. tostring(_G.SCRIPT_KEY)) -- Debug log
-print("[LOADER] Checking key: " .. script_key) -- Debug log
+print("[LOADER] Checking key: " .. script_key)
 local isValid = false
 for _, devKey in pairs(KeyStore.DEV_KEYS) do
     if devKey == script_key then
         isValid = true
-        print("[LOADER] Valid developer key found: " .. devKey)
         break
     end
 end
 for key, data in pairs(KeyStore.KEYS) do
-    print("[LOADER] Checking key pair: " .. key .. ", data: " .. tostring(data)) -- Debug log
     if key == script_key then
-        if not data.users then data.users = {} end -- Default to empty table if nil
+        if not data.users then data.users = {} end
         if #data.users == 0 or table.find(data.users, userId) then
             isValid = true
-            print("[LOADER] Valid key found for user or universal use: " .. key)
             if data.hwid and data.hwid ~= "" and data.hwid ~= hwid then
                 LocalPlayer:Kick("Sorry " .. username .. ", your HWID does not match the key!")
                 return
@@ -77,7 +71,7 @@ if not success then
     print("[LOADER] Error loading main.lua: " .. tostring(err))
 end
 
--- Load additional future scripts (example folder or URLs)
+-- Load GUI extensions for Players onglet
 local success, err = pcall(function()
     loadstring(game:HttpGet(REPO .. "gui_extensions.lua"))()
 end)

@@ -4322,7 +4322,7 @@ getgenv().PlayerActions:AddButton('Stop', function()
     stopAllActions()
 end)
 
-
+getgenv().AllPlayerActions = Tabs.Players:AddRightGroupbox('All Player Actions')
 
 getgenv().ShopFolder = Workspace:WaitForChild("Ignored"):WaitForChild("Shop")
 getgenv().OriginalPosition = nil

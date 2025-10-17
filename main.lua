@@ -4393,11 +4393,13 @@ getgenv().RagebotToggle = getgenv().RagebotBox:AddToggle('RagebotToggle', {
                     end)
                 end
             end
+            desync.enabled = false -- Disable Desync to avoid conflicts
             workspace.FallenPartsDestroyHeight = -50 -- Reset Anti Void
             Library:Notify("Ragebot disabled.", 3)
             print("[Ragebot] Toggle disabled")
         else
             local tool = equipAug()
+            desync.enabled = false -- Disable Desync to avoid conflicts
             workspace.FallenPartsDestroyHeight = -math.huge -- Enable Anti Void
             if tool then
                 Library:Notify("Ragebot enabled with [AUG].", 3)
@@ -4450,11 +4452,13 @@ getgenv().RagebotToggle = getgenv().RagebotBox:AddToggle('RagebotToggle', {
                     end)
                 end
             end
+            desync.enabled = false -- Disable Desync to avoid conflicts
             workspace.FallenPartsDestroyHeight = -50 -- Reset Anti Void
             Library:Notify("Ragebot disabled via keybind.", 3)
             print("[Ragebot] Keybind disabled")
         else
             local tool = equipAug()
+            desync.enabled = false -- Disable Desync to avoid conflicts
             workspace.FallenPartsDestroyHeight = -math.huge -- Enable Anti Void
             if tool then
                 Library:Notify("Ragebot enabled with [AUG] via keybind.", 3)
@@ -4635,6 +4639,7 @@ getgenv().Services.RunService.Heartbeat:Connect(function()
                 -- Reset position to allow free movement
                 pcall(function()
                     rootPart.CFrame = getgenv().LastPlayerPosition
+                    getgenv().Services.RunService.RenderStepped:Wait()
                 end)
             else
                 getgenv().RagebotViewEnabled = false

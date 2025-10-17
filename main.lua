@@ -4325,6 +4325,7 @@ end)
 -- Ragebot Section (Player List + View + Teleport + Kill Aura)
 print("[Ragebot] Initializing...")
 getgenv().RagebotBox = Tabs.Players:AddRightGroupbox('Ragebot')
+print("[Ragebot] Groupbox initialized:", tostring(getgenv().RagebotBox))
 
 -- Initialize global variables
 getgenv().RagebotEnabled = false
@@ -4338,18 +4339,25 @@ getgenv().RagebotSetback.Size = Vector3.new(2, 2, 1)
 getgenv().RagebotSetback.CanCollide = false
 getgenv().RagebotSetback.Anchored = true
 getgenv().RagebotSetback.Transparency = 1
+print("[Ragebot] Setback created")
 
 -- Function to equip Aug
 local function equipAug()
-    for _, tool in pairs(getgenv().Services.LocalPlayer.Backpack:GetChildren()) do
+    local player = getgenv().Services.LocalPlayer
+    if not player.Character or not player.Backpack then
+        Library:Notify("Character or Backpack not loaded!", 3)
+        print("[Ragebot] Failed to equip Aug: Character or Backpack missing")
+        return nil
+    end
+    for _, tool in pairs(player.Backpack:GetChildren()) do
         if tool.Name == "[AUG]" then
-            tool.Parent = getgenv().Services.LocalPlayer.Character
+            tool.Parent = player.Character
             Library:Notify("Equipped [AUG]", 3)
             print("[Ragebot] Equipped [AUG]")
             return tool
         end
     end
-    for _, tool in pairs(getgenv().Services.LocalPlayer.Character:GetChildren()) do
+    for _, tool in pairs(player.Character:GetChildren()) do
         if tool.Name == "[AUG]" then
             Library:Notify("[AUG] already equipped", 3)
             print("[Ragebot] [AUG] already equipped")
@@ -4370,12 +4378,16 @@ getgenv().RagebotToggle = getgenv().RagebotBox:AddToggle('RagebotToggle', {
         getgenv().RagebotEnabled = state
         if not state then
             getgenv().RagebotViewEnabled = false
-            getgenv().RagebotToggle:SetValue(false) -- Sync toggle with keybind
+            if getgenv().RagebotViewToggle then
+                pcall(function() getgenv().RagebotViewToggle:SetValue(false) end)
+            end
             if getgenv().Services.LocalPlayer.Character then
                 workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
                 if getgenv().LastPlayerPosition then
-                    getgenv().Services.LocalPlayer.Character.HumanoidRootPart.CFrame = getgenv().LastPlayerPosition
-                    getgenv().LastPlayerPosition = nil
+                    pcall(function()
+                        getgenv().Services.LocalPlayer.Character.HumanoidRootPart.CFrame = getgenv().LastPlayerPosition
+                        getgenv().LastPlayerPosition = nil
+                    end)
                 end
             end
             Library:Notify("Ragebot disabled.", 3)
@@ -4389,7 +4401,9 @@ getgenv().RagebotToggle = getgenv().RagebotBox:AddToggle('RagebotToggle', {
                     Library:Notify("Ragebot enabled, viewing target: " .. tostring(getgenv().SelectedRageTarget), 3)
                 else
                     getgenv().RagebotViewEnabled = false
-                    getgenv().RagebotBox:GetToggle('RagebotView'):SetValue(false) -- Sync view toggle
+                    if getgenv().RagebotViewToggle then
+                        pcall(function() getgenv().RagebotViewToggle:SetValue(false) end)
+                    end
                     Library:Notify("No valid target selected for Ragebot View!", 3)
                 end
             else
@@ -4406,15 +4420,19 @@ getgenv().RagebotToggle = getgenv().RagebotBox:AddToggle('RagebotToggle', {
     Callback = function(state)
         if getgenv().Services.UserInputService:GetFocusedTextBox() then return end
         getgenv().RagebotEnabled = state
-        getgenv().RagebotToggle:SetValue(state) -- Sync keybind with toggle
+        pcall(function() getgenv().RagebotToggle:SetValue(state) end) -- Sync keybind with toggle
         if not state then
             getgenv().RagebotViewEnabled = false
-            getgenv().RagebotBox:GetToggle('RagebotView'):SetValue(false) -- Sync view toggle
+            if getgenv().RagebotViewToggle then
+                pcall(function() getgenv().RagebotViewToggle:SetValue(false) end)
+            end
             if getgenv().Services.LocalPlayer.Character then
                 workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
                 if getgenv().LastPlayerPosition then
-                    getgenv().Services.LocalPlayer.Character.HumanoidRootPart.CFrame = getgenv().LastPlayerPosition
-                    getgenv().LastPlayerPosition = nil
+                    pcall(function()
+                        getgenv().Services.LocalPlayer.Character.HumanoidRootPart.CFrame = getgenv().LastPlayerPosition
+                        getgenv().LastPlayerPosition = nil
+                    end)
                 end
             end
             Library:Notify("Ragebot disabled via keybind.", 3)
@@ -4428,7 +4446,9 @@ getgenv().RagebotToggle = getgenv().RagebotBox:AddToggle('RagebotToggle', {
                     Library:Notify("Ragebot enabled via keybind, viewing target: " .. tostring(getgenv().SelectedRageTarget), 3)
                 else
                     getgenv().RagebotViewEnabled = false
-                    getgenv().RagebotBox:GetToggle('RagebotView'):SetValue(false) -- Sync view toggle
+                    if getgenv().RagebotViewToggle then
+                        pcall(function() getgenv().RagebotViewToggle:SetValue(false) end)
+                    end
                     Library:Notify("No valid target selected for Ragebot View!", 3)
                 end
             else
@@ -4454,7 +4474,9 @@ getgenv().RagebotDropdown = getgenv().RagebotBox:AddDropdown('RageTarget', {
                 Library:Notify("Ragebot target set to: " .. tostring(value), 3)
             else
                 getgenv().RagebotViewEnabled = false
-                getgenv().RagebotBox:GetToggle('RagebotView'):SetValue(false) -- Sync view toggle
+                if getgenv().RagebotViewToggle then
+                    pcall(function() getgenv().RagebotViewToggle:SetValue(false) end)
+                end
                 if getgenv().Services.LocalPlayer.Character then
                     workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
                 end
@@ -4465,7 +4487,7 @@ getgenv().RagebotDropdown = getgenv().RagebotBox:AddDropdown('RageTarget', {
 })
 
 -- View toggle (only works when Ragebot is enabled)
-getgenv().RagebotBox:AddToggle('RagebotView', {
+getgenv().RagebotViewToggle = getgenv().RagebotBox:AddToggle('RagebotView', {
     Text = 'View Target',
     Default = false,
     Tooltip = 'Lock camera on the selected Ragebot target.',
@@ -4473,7 +4495,7 @@ getgenv().RagebotBox:AddToggle('RagebotView', {
         getgenv().RagebotViewEnabled = state
         if not getgenv().RagebotEnabled then
             getgenv().RagebotViewEnabled = false
-            getgenv().RagebotBox:GetToggle('RagebotView'):SetValue(false) -- Sync view toggle
+            pcall(function() getgenv().RagebotViewToggle:SetValue(false) end)
             if getgenv().Services.LocalPlayer.Character then
                 workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
             end
@@ -4488,7 +4510,7 @@ getgenv().RagebotBox:AddToggle('RagebotView', {
                 Library:Notify("Viewing Ragebot target: " .. tostring(getgenv().SelectedRageTarget), 3)
             else
                 getgenv().RagebotViewEnabled = false
-                getgenv().RagebotBox:GetToggle('RagebotView'):SetValue(false) -- Sync view toggle
+                pcall(function() getgenv().RagebotViewToggle:SetValue(false) end)
                 if getgenv().Services.LocalPlayer.Character then
                     workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
                 end
@@ -4520,18 +4542,20 @@ getgenv().Services.Players.PlayerRemoving:Connect(function()
     local names = {}
     for _, plr in pairs(getgenv().Services.Players:GetPlayers()) do
         table.insert(names, plr.Name)
-    end
+    }
     pcall(function()
         getgenv().RagebotDropdown:SetValues(names)
         if getgenv().SelectedRageTarget and not getgenv().Services.Players:FindFirstChild(getgenv().SelectedRageTarget) then
             getgenv().SelectedRageTarget = nil
             getgenv().RagebotViewEnabled = false
-            getgenv().RagebotBox:GetToggle('RagebotView'):SetValue(false) -- Sync view toggle
+            pcall(function() getgenv().RagebotViewToggle:SetValue(false) end)
             if getgenv().Services.LocalPlayer.Character then
                 workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
                 if getgenv().LastPlayerPosition then
-                    getgenv().Services.LocalPlayer.Character.HumanoidRootPart.CFrame = getgenv().LastPlayerPosition
-                    getgenv().LastPlayerPosition = nil
+                    pcall(function()
+                        getgenv().Services.LocalPlayer.Character.HumanoidRootPart.CFrame = getgenv().LastPlayerPosition
+                        getgenv().LastPlayerPosition = nil
+                    end)
                 end
             end
             Library:Notify("Selected player left the game, resetting Ragebot target.", 3)
@@ -4594,24 +4618,32 @@ task.spawn(function()
                     end)
                 else
                     getgenv().RagebotViewEnabled = false
-                    getgenv().RagebotBox:GetToggle('RagebotView'):SetValue(false) -- Sync view toggle
+                    if getgenv().RagebotViewToggle then
+                        pcall(function() getgenv().RagebotViewToggle:SetValue(false) end)
+                    end
                     if getgenv().Services.LocalPlayer.Character then
                         workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
                         if getgenv().LastPlayerPosition then
-                            getgenv().Services.LocalPlayer.Character.HumanoidRootPart.CFrame = getgenv().LastPlayerPosition
-                            getgenv().LastPlayerPosition = nil
+                            pcall(function()
+                                getgenv().Services.LocalPlayer.Character.HumanoidRootPart.CFrame = getgenv().LastPlayerPosition
+                                getgenv().LastPlayerPosition = nil
+                            end)
                         end
                     end
                     Library:Notify("Ragebot target is invalid, disabling view and teleport.", 3)
                 end
             else
                 getgenv().RagebotViewEnabled = false
-                getgenv().RagebotBox:GetToggle('RagebotView'):SetValue(false) -- Sync view toggle
+                if getgenv().RagebotViewToggle then
+                    pcall(function() getgenv().RagebotViewToggle:SetValue(false) end)
+                end
                 if getgenv().Services.LocalPlayer.Character then
                     workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
                     if getgenv().LastPlayerPosition then
-                        getgenv().Services.LocalPlayer.Character.HumanoidRootPart.CFrame = getgenv().LastPlayerPosition
-                        getgenv().LastPlayerPosition = nil
+                        pcall(function()
+                            getgenv().Services.LocalPlayer.Character.HumanoidRootPart.CFrame = getgenv().LastPlayerPosition
+                            getgenv().LastPlayerPosition = nil
+                        end)
                     end
                 end
                 Library:Notify("Ragebot target is invalid, disabling view and teleport.", 3)
@@ -4619,8 +4651,10 @@ task.spawn(function()
         elseif getgenv().Services.LocalPlayer.Character then
             workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
             if getgenv().LastPlayerPosition then
-                getgenv().Services.LocalPlayer.Character.HumanoidRootPart.CFrame = getgenv().LastPlayerPosition
-                getgenv().LastPlayerPosition = nil
+                pcall(function()
+                    getgenv().Services.LocalPlayer.Character.HumanoidRootPart.CFrame = getgenv().LastPlayerPosition
+                    getgenv().LastPlayerPosition = nil
+                end)
             end
         end
         task.wait(0.1)

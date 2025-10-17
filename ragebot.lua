@@ -1,16 +1,22 @@
 -- Ragebot script using LinoriaLib
-local repo = 'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
+local repo =
+    'https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/'
 local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
-local Window = Library:CreateWindow({ Title = 'Ragebot | priv71', AutoShow = true, TabPadding = 15, MenuFadeTime = 0.2 })
+local Window = Library:CreateWindow({
+    Title = 'Ragebot | priv71',
+    AutoShow = true,
+    TabPadding = 15,
+    MenuFadeTime = 0.2,
+})
 local Tabs = { Main = Window:AddTab('Main') }
 local RagebotBox = Tabs.Main:AddRightGroupbox('Ragebot')
 
 -- Services
 getgenv().Services = {
-    Players = game:GetService("Players"),
-    LocalPlayer = game:GetService("Players").LocalPlayer,
-    ReplicatedStorage = game:GetService("ReplicatedStorage"),
-    RunService = game:GetService("RunService")
+    Players = game:GetService('Players'),
+    LocalPlayer = game:GetService('Players').LocalPlayer,
+    ReplicatedStorage = game:GetService('ReplicatedStorage'),
+    RunService = game:GetService('RunService'),
 }
 
 -- Initialize globals
@@ -21,49 +27,56 @@ getgenv().LastFireTime = 0
 getgenv().LastReloadTime = 0
 getgenv().EquippedAug = nil
 getgenv().DesyncPaused = false
-getgenv().RagebotSetback = Instance.new("Part")
-getgenv().RagebotSetback.Name = "Ragebot Setback"
+getgenv().RagebotSetback = Instance.new('Part')
+getgenv().RagebotSetback.Name = 'Ragebot Setback'
 getgenv().RagebotSetback.Parent = workspace
 getgenv().RagebotSetback.Size = Vector3.new(2, 2, 1)
 getgenv().RagebotSetback.CanCollide = false
 getgenv().RagebotSetback.Anchored = true
 getgenv().RagebotSetback.Transparency = 1
-print("[Ragebot] Setback created")
+print('[Ragebot] Setback created')
 
 -- Disable Desync from main.lua if present
 if getgenv().desync then
     getgenv().desync.enabled = false
-    print("[Ragebot] Disabled main.lua Desync to avoid conflicts")
+    print('[Ragebot] Disabled main.lua Desync to avoid conflicts')
 end
 
 -- Function to buy Aug or ammo
 local function buyItem(itemName)
     local player = getgenv().Services.LocalPlayer
-    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
-        print("[Ragebot] Failed to buy item: Character or HumanoidRootPart missing")
+    if
+        not player.Character
+        or not player.Character:FindFirstChild('HumanoidRootPart')
+    then
+        print(
+            '[Ragebot] Failed to buy item: Character or HumanoidRootPart missing'
+        )
         return false
     end
     local success, shopFolder = pcall(function()
-        return workspace:WaitForChild("Ignored"):WaitForChild("Shop")
+        return workspace:WaitForChild('Ignored'):WaitForChild('Shop')
     end)
     if not success or not shopFolder then
-        print("[Ragebot] Failed to find shop folder:", tostring(shopFolder))
+        print('[Ragebot] Failed to find shop folder:', tostring(shopFolder))
         return false
     end
     for _, item in pairs(shopFolder:GetChildren()) do
         if item.Name == itemName then
-            local itemHead = item:FindFirstChild("Head")
+            local itemHead = item:FindFirstChild('Head')
             if itemHead then
                 getgenv().DesyncPaused = true -- Pause desync
-                local originalPosition = player.Character.HumanoidRootPart.CFrame
+                local originalPosition =
+                    player.Character.HumanoidRootPart.CFrame
                 for _, tool in pairs(player.Character:GetChildren()) do
-                    if tool:IsA("Tool") then
+                    if tool:IsA('Tool') then
                         tool.Parent = player.Backpack
                     end
                 end
-                player.Character.HumanoidRootPart.CFrame = itemHead.CFrame + Vector3.new(0, 3.2, 0)
+                player.Character.HumanoidRootPart.CFrame = itemHead.CFrame
+                    + Vector3.new(0, 3.2, 0)
                 task.wait(0.1)
-                local clickDetector = item:FindFirstChild("ClickDetector")
+                local clickDetector = item:FindFirstChild('ClickDetector')
                 if clickDetector then
                     for i = 1, 3 do
                         pcall(function()
@@ -71,17 +84,17 @@ local function buyItem(itemName)
                         end)
                         task.wait(0.1)
                     end
-                    print("[Ragebot] Purchased " .. itemName)
+                    print('[Ragebot] Purchased ' .. itemName)
                 end
                 player.Character.HumanoidRootPart.CFrame = originalPosition
-                task.wait(0.5)
+                task.wait(1) -- Increased delay for stability
                 getgenv().DesyncPaused = false -- Resume desync
                 return true
             end
             break
         end
     end
-    print("[Ragebot] Failed to find " .. itemName .. " in shop")
+    print('[Ragebot] Failed to find ' .. itemName .. ' in shop')
     getgenv().DesyncPaused = false -- Resume desync in case of failure
     return false
 end
@@ -89,8 +102,9 @@ end
 -- Function to get ammo count
 local function getAmmoCount()
     local player = getgenv().Services.LocalPlayer
-    local inventory = player:FindFirstChild("DataFolder") and player.DataFolder:FindFirstChild("Inventory")
-    local ammo = inventory and inventory:FindFirstChild("[AUG]")
+    local inventory = player:FindFirstChild('DataFolder')
+        and player.DataFolder:FindFirstChild('Inventory')
+    local ammo = inventory and inventory:FindFirstChild('[AUG]')
     if ammo then
         return tonumber(ammo.Value) or 0
     end
@@ -101,62 +115,94 @@ end
 local function equipAug()
     local player = getgenv().Services.LocalPlayer
     if not player.Character or not player.Backpack then
-        print("[Ragebot] Failed to equip Aug: Character or Backpack missing")
+        print('[Ragebot] Failed to equip Aug: Character or Backpack missing')
         return nil
     end
+    -- Unequip all tools
+    for _, tool in pairs(player.Character:GetChildren()) do
+        if tool:IsA('Tool') then
+            tool.Parent = player.Backpack
+        end
+    end
     for _, tool in pairs(player.Backpack:GetChildren()) do
-        if tool.Name == "[AUG]" then
+        if tool.Name == '[AUG]' then
             tool.Parent = player.Character
-            print("[Ragebot] Equipped [AUG]")
+            print('[Ragebot] Equipped [AUG]')
             task.wait(0.5)
             getgenv().EquippedAug = tool
             return tool
         end
     end
     for _, tool in pairs(player.Character:GetChildren()) do
-        if tool.Name == "[AUG]" then
-            print("[Ragebot] [AUG] already equipped")
+        if tool.Name == '[AUG]' then
+            print('[Ragebot] [AUG] already equipped')
             getgenv().EquippedAug = tool
             return tool
         end
     end
-    if buyItem("[AUG] - $2131") then
+    if buyItem('[AUG] - $2131') then
         for _, tool in pairs(player.Backpack:GetChildren()) do
-            if tool.Name == "[AUG]" then
+            if tool.Name == '[AUG]' then
                 tool.Parent = player.Character
-                print("[Ragebot] Equipped [AUG] after purchase")
+                print('[Ragebot] Equipped [AUG] after purchase')
                 task.wait(0.5)
                 getgenv().EquippedAug = tool
                 return tool
             end
         end
     end
-    print("[Ragebot] No [AUG] found")
+    print('[Ragebot] No [AUG] found')
     return nil
 end
 
 -- Function to check and reload ammo
 local function reloadAug()
     local player = getgenv().Services.LocalPlayer
-    if not player.Character or not getgenv().EquippedAug or not getgenv().EquippedAug:FindFirstChild("Ammo") then
-        print("[Ragebot] Failed to reload Aug: Character or Ammo missing")
+    if
+        not player.Character
+        or not getgenv().EquippedAug
+        or not getgenv().EquippedAug:FindFirstChild('Ammo')
+    then
+        print('[Ragebot] Failed to reload Aug: Character or Ammo missing')
         return false
     end
     local ammo = getgenv().EquippedAug.Ammo.Value
     if ammo <= 0 then
         getgenv().DesyncPaused = true -- Pause desync
+        -- Unequip all tools
+        for _, tool in pairs(player.Character:GetChildren()) do
+            if tool:IsA('Tool') then
+                tool.Parent = player.Backpack
+            end
+        end
         local ammoCount = getAmmoCount()
         if ammoCount <= 0 then
-            if not buyItem("90 [AUG Ammo] - $87") then
-                print("[Ragebot] Failed to purchase [AUG] ammo")
-                getgenv().DesyncPaused = false -- Resume desync
-                return false
+            for i = 1, 5 do -- Buy ammo 5 times
+                if not buyItem('90 [AUG Ammo] - $87') then
+                    print('[Ragebot] Failed to purchase [AUG] ammo')
+                    getgenv().DesyncPaused = false
+                    return false
+                end
+                print(
+                    '[Ragebot] Purchased 90 [AUG Ammo] - $87 (attempt '
+                        .. i
+                        .. ')'
+                )
             end
-            print("[Ragebot] Purchased [AUG] ammo")
+        end
+        -- Re-equip Aug after buying ammo
+        local tool = equipAug()
+        if not tool then
+            print('[Ragebot] Failed to re-equip [AUG] after ammo purchase')
+            getgenv().DesyncPaused = false
+            return false
         end
         pcall(function()
-            getgenv().Services.ReplicatedStorage.MainEvent:FireServer("Reload", getgenv().EquippedAug)
-            print("[Ragebot] Reloading [AUG]")
+            getgenv().Services.ReplicatedStorage.MainEvent:FireServer(
+                'Reload',
+                getgenv().EquippedAug
+            )
+            print('[Ragebot] Reloading [AUG]')
         end)
         getgenv().LastReloadTime = tick()
         task.wait(3.7)
@@ -178,28 +224,40 @@ RagebotBox:AddToggle('RagebotToggle', {
                 local tool = equipAug()
                 if not tool then
                     getgenv().RagebotEnabled = false
-                    pcall(function() RagebotBox.Toggles.RagebotToggle:SetValue(false) end)
-                    print("[Ragebot] Failed to equip [AUG]")
+                    pcall(function()
+                        RagebotBox.Toggles.RagebotToggle:SetValue(false)
+                    end)
+                    print('[Ragebot] Failed to equip [AUG]')
                     return
                 end
-                print("[Ragebot] Enabled for target: " .. tostring(getgenv().SelectedTarget))
+                print(
+                    '[Ragebot] Enabled for target: '
+                        .. tostring(getgenv().SelectedTarget)
+                )
                 task.wait(2) -- Wait 2 seconds to stabilize
             else
                 getgenv().RagebotEnabled = false
-                pcall(function() RagebotBox.Toggles.RagebotToggle:SetValue(false) end)
-                print("[Ragebot] No target selected")
+                pcall(function()
+                    RagebotBox.Toggles.RagebotToggle:SetValue(false)
+                end)
+                print('[Ragebot] No target selected')
             end
         else
             getgenv().EquippedAug = nil
             getgenv().DesyncPaused = false
             getgenv().ViewEnabled = false
-            pcall(function() RagebotBox.Toggles.ViewToggle:SetValue(false) end)
+            pcall(function()
+                RagebotBox.Toggles.ViewToggle:SetValue(false)
+            end)
             if getgenv().Services.LocalPlayer.Character then
-                workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                workspace.CurrentCamera.CameraSubject =
+                    getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass(
+                        'Humanoid'
+                    )
             end
-            print("[Ragebot] Disabled")
+            print('[Ragebot] Disabled')
         end
-    end
+    end,
 })
 
 -- Toggle for viewing the target
@@ -211,33 +269,56 @@ RagebotBox:AddToggle('ViewToggle', {
         getgenv().ViewEnabled = state
         if not getgenv().RagebotEnabled or not getgenv().SelectedTarget then
             getgenv().ViewEnabled = false
-            pcall(function() RagebotBox.Toggles.ViewToggle:SetValue(false) end)
+            pcall(function()
+                RagebotBox.Toggles.ViewToggle:SetValue(false)
+            end)
             if getgenv().Services.LocalPlayer.Character then
-                workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                workspace.CurrentCamera.CameraSubject =
+                    getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass(
+                        'Humanoid'
+                    )
             end
-            print("[Ragebot] View disabled: Ragebot or target not set")
+            print('[Ragebot] View disabled: Ragebot or target not set')
             return
         end
         if state then
-            local targetPlayer = getgenv().Services.Players:FindFirstChild(getgenv().SelectedTarget)
-            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
-                workspace.CurrentCamera.CameraSubject = targetPlayer.Character.Humanoid
-                print("[Ragebot] Viewing target: " .. tostring(getgenv().SelectedTarget))
+            local targetPlayer = getgenv().Services.Players:FindFirstChild(
+                getgenv().SelectedTarget
+            )
+            if
+                targetPlayer
+                and targetPlayer.Character
+                and targetPlayer.Character:FindFirstChild('Humanoid')
+            then
+                workspace.CurrentCamera.CameraSubject =
+                    targetPlayer.Character.Humanoid
+                print(
+                    '[Ragebot] Viewing target: '
+                        .. tostring(getgenv().SelectedTarget)
+                )
             else
                 getgenv().ViewEnabled = false
-                pcall(function() RagebotBox.Toggles.ViewToggle:SetValue(false) end)
+                pcall(function()
+                    RagebotBox.Toggles.ViewToggle:SetValue(false)
+                end)
                 if getgenv().Services.LocalPlayer.Character then
-                    workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                    workspace.CurrentCamera.CameraSubject =
+                        getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass(
+                            'Humanoid'
+                        )
                 end
-                print("[Ragebot] No valid target for view")
+                print('[Ragebot] No valid target for view')
             end
         else
             if getgenv().Services.LocalPlayer.Character then
-                workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                workspace.CurrentCamera.CameraSubject =
+                    getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass(
+                        'Humanoid'
+                    )
             end
-            print("[Ragebot] View disabled")
+            print('[Ragebot] View disabled')
         end
-    end
+    end,
 })
 
 -- Dropdown: list of all players
@@ -247,49 +328,64 @@ getgenv().RagebotDropdown = RagebotBox:AddDropdown('RagebotTarget', {
     Tooltip = 'Select a player to teleport above and apply Kill Aura.',
     Callback = function(value)
         getgenv().SelectedTarget = value
-        print("[Ragebot] Selected target:", tostring(value))
+        print('[Ragebot] Selected target:', tostring(value))
         if getgenv().RagebotEnabled and getgenv().SelectedTarget then
             local tool = equipAug()
             if not tool then
                 getgenv().RagebotEnabled = false
-                pcall(function() RagebotBox.Toggles.RagebotToggle:SetValue(false) end)
-                print("[Ragebot] Failed to equip [AUG]")
+                pcall(function()
+                    RagebotBox.Toggles.RagebotToggle:SetValue(false)
+                end)
+                print('[Ragebot] Failed to equip [AUG]')
                 return
             end
-            print("[Ragebot] Target set to: " .. tostring(value))
+            print('[Ragebot] Target set to: ' .. tostring(value))
             task.wait(2) -- Wait 2 seconds to stabilize
         elseif getgenv().RagebotEnabled then
             getgenv().RagebotEnabled = false
             getgenv().EquippedAug = nil
             getgenv().DesyncPaused = false
             getgenv().ViewEnabled = false
-            pcall(function() RagebotBox.Toggles.ViewToggle:SetValue(false) end)
-            pcall(function() RagebotBox.Toggles.RagebotToggle:SetValue(false) end)
+            pcall(function()
+                RagebotBox.Toggles.ViewToggle:SetValue(false)
+            end)
+            pcall(function()
+                RagebotBox.Toggles.RagebotToggle:SetValue(false)
+            end)
             if getgenv().Services.LocalPlayer.Character then
-                workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                workspace.CurrentCamera.CameraSubject =
+                    getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass(
+                        'Humanoid'
+                    )
             end
-            print("[Ragebot] Disabled: No target selected")
+            print('[Ragebot] Disabled: No target selected')
         end
-    end
+    end,
 })
 
 -- Handle character respawn
-getgenv().Services.Players.LocalPlayer.CharacterAdded:Connect(function(character)
-    if getgenv().RagebotEnabled and getgenv().SelectedTarget then
-        print("[Ragebot] Character respawned, re-equipping Aug")
-        task.wait(2) -- Wait for character to stabilize
-        local tool = equipAug()
-        if not tool then
-            getgenv().RagebotEnabled = false
-            getgenv().ViewEnabled = false
-            pcall(function() RagebotBox.Toggles.RagebotToggle:SetValue(false) end)
-            pcall(function() RagebotBox.Toggles.ViewToggle:SetValue(false) end)
-            print("[Ragebot] Failed to equip [AUG] after respawn")
-            return
+getgenv().Services.Players.LocalPlayer.CharacterAdded:Connect(
+    function(character)
+        if getgenv().RagebotEnabled and getgenv().SelectedTarget then
+            print('[Ragebot] Character respawned, re-equipping Aug')
+            task.wait(2) -- Wait for character to stabilize
+            local tool = equipAug()
+            if not tool then
+                getgenv().RagebotEnabled = false
+                getgenv().ViewEnabled = false
+                pcall(function()
+                    RagebotBox.Toggles.RagebotToggle:SetValue(false)
+                end)
+                pcall(function()
+                    RagebotBox.Toggles.ViewToggle:SetValue(false)
+                end)
+                print('[Ragebot] Failed to equip [AUG] after respawn')
+                return
+            end
+            print('[Ragebot] Re-equipped [AUG] after respawn')
         end
-        print("[Ragebot] Re-equipped [AUG] after respawn")
     end
-end)
+)
 
 -- Auto-refresh player list
 getgenv().Services.Players.PlayerAdded:Connect(function()
@@ -299,7 +395,10 @@ getgenv().Services.Players.PlayerAdded:Connect(function()
     end
     pcall(function()
         getgenv().RagebotDropdown:SetValues(names)
-        print("[Ragebot] Player list updated on join:", table.concat(names, ", "))
+        print(
+            '[Ragebot] Player list updated on join:',
+            table.concat(names, ', ')
+        )
     end)
 end)
 
@@ -310,34 +409,56 @@ getgenv().Services.Players.PlayerRemoving:Connect(function()
     end
     pcall(function()
         getgenv().RagebotDropdown:SetValues(names)
-        if getgenv().SelectedTarget and not getgenv().Services.Players:FindFirstChild(getgenv().SelectedTarget) then
+        if
+            getgenv().SelectedTarget
+            and not getgenv().Services.Players:FindFirstChild(
+                getgenv().SelectedTarget
+            )
+        then
             getgenv().SelectedTarget = nil
             getgenv().RagebotEnabled = false
             getgenv().EquippedAug = nil
             getgenv().DesyncPaused = false
             getgenv().ViewEnabled = false
-            pcall(function() RagebotBox.Toggles.RagebotToggle:SetValue(false) end)
-            pcall(function() RagebotBox.Toggles.ViewToggle:SetValue(false) end)
+            pcall(function()
+                RagebotBox.Toggles.RagebotToggle:SetValue(false)
+            end)
+            pcall(function()
+                RagebotBox.Toggles.ViewToggle:SetValue(false)
+            end)
             if getgenv().Services.LocalPlayer.Character then
-                workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                workspace.CurrentCamera.CameraSubject =
+                    getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass(
+                        'Humanoid'
+                    )
             end
-            print("[Ragebot] Selected player left the game")
+            print('[Ragebot] Selected player left the game')
         end
-        print("[Ragebot] Player list updated on leave:", table.concat(names, ", "))
+        print(
+            '[Ragebot] Player list updated on leave:',
+            table.concat(names, ', ')
+        )
     end)
 end)
 
 -- Desync logic (copied from Void mode, adapted for 100 studs above target)
 local DesyncConnection
 DesyncConnection = getgenv().Services.RunService.Heartbeat:Connect(function()
-    if getgenv().RagebotEnabled and getgenv().SelectedTarget and not getgenv().DesyncPaused and getgenv().EquippedAug then
-        local targetPlayer = getgenv().Services.Players:FindFirstChild(getgenv().SelectedTarget)
+    if
+        getgenv().RagebotEnabled
+        and getgenv().SelectedTarget
+        and not getgenv().DesyncPaused
+        and getgenv().EquippedAug
+    then
+        local targetPlayer =
+            getgenv().Services.Players:FindFirstChild(getgenv().SelectedTarget)
         local player = getgenv().Services.LocalPlayer
         if targetPlayer and targetPlayer.Character and player.Character then
-            local rootPart = player.Character:FindFirstChild("HumanoidRootPart")
+            local rootPart = player.Character:FindFirstChild('HumanoidRootPart')
             if rootPart then
                 local oldPosition = rootPart.CFrame
-                local targetRootPart = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+                local targetRootPart =
+                    targetPlayer.Character:FindFirstChild('HumanoidRootPart')
                 if targetRootPart then
                     local teleportPosition = Vector3.new(
                         targetRootPart.Position.X,
@@ -347,10 +468,12 @@ DesyncConnection = getgenv().Services.RunService.Heartbeat:Connect(function()
                     pcall(function()
                         rootPart.CFrame = CFrame.new(teleportPosition)
                         if not getgenv().ViewEnabled then
-                            workspace.CurrentCamera.CameraSubject = getgenv().RagebotSetback
+                            workspace.CurrentCamera.CameraSubject =
+                                getgenv().RagebotSetback
                         end
                         getgenv().Services.RunService.RenderStepped:Wait()
-                        getgenv().RagebotSetback.CFrame = oldPosition * CFrame.new(0, rootPart.Size.Y / 2 + 0.5, 0)
+                        getgenv().RagebotSetback.CFrame = oldPosition
+                            * CFrame.new(0, rootPart.Size.Y / 2 + 0.5, 0)
                         rootPart.CFrame = oldPosition
                     end)
                 end
@@ -361,57 +484,101 @@ end)
 
 -- Kill Aura and autoreload logic (shoot from 100 studs with dynamic direction)
 local KillAuraConnection
-KillAuraConnection = getgenv().Services.RunService.RenderStepped:Connect(function()
-    if getgenv().RagebotEnabled and getgenv().SelectedTarget and not getgenv().DesyncPaused then
-        local targetPlayer = getgenv().Services.Players:FindFirstChild(getgenv().SelectedTarget)
-        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
-            local targetHead = targetPlayer.Character.Head
-            local targetRootPart = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if tick() - getgenv().LastFireTime >= 0.1 and tick() - getgenv().LastReloadTime >= 3.7 and targetRootPart then
-                if not getgenv().EquippedAug or not getgenv().EquippedAug.Parent or not getgenv().EquippedAug:FindFirstChild("Handle") or not getgenv().EquippedAug:FindFirstChild("Ammo") then
-                    task.spawn(function()
-                        getgenv().EquippedAug = equipAug()
-                    end)
-                end
-                if getgenv().EquippedAug and getgenv().EquippedAug:FindFirstChild("Handle") and getgenv().EquippedAug:FindFirstChild("Ammo") then
-                    if not reloadAug() then
-                        print("[Ragebot] Failed to reload [AUG] ammo, retrying...")
+KillAuraConnection = getgenv().Services.RunService.RenderStepped:Connect(
+    function()
+        if
+            getgenv().RagebotEnabled
+            and getgenv().SelectedTarget
+            and not getgenv().DesyncPaused
+        then
+            local targetPlayer = getgenv().Services.Players:FindFirstChild(
+                getgenv().SelectedTarget
+            )
+            if
+                targetPlayer
+                and targetPlayer.Character
+                and targetPlayer.Character:FindFirstChild('Head')
+            then
+                local targetHead = targetPlayer.Character.Head
+                local targetRootPart =
+                    targetPlayer.Character:FindFirstChild('HumanoidRootPart')
+                if
+                    tick() - getgenv().LastFireTime >= 0.1
+                    and tick() - getgenv().LastReloadTime >= 3.7
+                    and targetRootPart
+                then
+                    if
+                        not getgenv().EquippedAug
+                        or not getgenv().EquippedAug.Parent
+                        or not getgenv().EquippedAug:FindFirstChild('Handle')
+                        or not getgenv().EquippedAug:FindFirstChild('Ammo')
+                    then
                         task.spawn(function()
                             getgenv().EquippedAug = equipAug()
                         end)
                     end
-                    if getgenv().EquippedAug and getgenv().EquippedAug:FindFirstChild("Handle") and getgenv().EquippedAug:FindFirstChild("Ammo") and getgenv().EquippedAug.Ammo.Value > 0 then
-                        pcall(function()
-                            local teleportPosition = Vector3.new(
-                                targetRootPart.Position.X,
-                                targetRootPart.Position.Y + 100,
-                                targetRootPart.Position.Z
+                    if
+                        getgenv().EquippedAug
+                        and getgenv().EquippedAug:FindFirstChild('Handle')
+                        and getgenv().EquippedAug:FindFirstChild('Ammo')
+                    then
+                        if not reloadAug() then
+                            print(
+                                '[Ragebot] Failed to reload [AUG] ammo, retrying...'
                             )
-                            local shootDirection = (targetHead.Position - teleportPosition).Unit
-                            getgenv().Services.ReplicatedStorage.MainEvent:FireServer(
-                                "ShootGun",
-                                getgenv().EquippedAug:FindFirstChild("Handle"),
-                                teleportPosition,
-                                targetHead.Position,
-                                targetHead,
-                                shootDirection
-                            )
-                            print("[Ragebot] Fired at target:", getgenv().SelectedTarget)
-                        end)
-                        getgenv().LastFireTime = tick()
+                            task.spawn(function()
+                                getgenv().EquippedAug = equipAug()
+                            end)
+                        end
+                        if
+                            getgenv().EquippedAug
+                            and getgenv().EquippedAug:FindFirstChild('Handle')
+                            and getgenv().EquippedAug:FindFirstChild('Ammo')
+                            and getgenv().EquippedAug.Ammo.Value > 0
+                        then
+                            pcall(function()
+                                local teleportPosition = Vector3.new(
+                                    targetRootPart.Position.X,
+                                    targetRootPart.Position.Y + 100,
+                                    targetRootPart.Position.Z
+                                )
+                                local shootDirection = (
+                                    targetHead.Position - teleportPosition
+                                ).Unit
+                                getgenv().Services.ReplicatedStorage.MainEvent:FireServer(
+                                    'ShootGun',
+                                    getgenv().EquippedAug:FindFirstChild(
+                                        'Handle'
+                                    ),
+                                    teleportPosition,
+                                    targetHead.Position,
+                                    targetHead,
+                                    shootDirection
+                                )
+                                print(
+                                    '[Ragebot] Fired at target:',
+                                    getgenv().SelectedTarget
+                                )
+                            end)
+                            getgenv().LastFireTime = tick()
+                        end
                     end
                 end
             end
         end
     end
-end)
+)
 
 -- Unload handler
 Library:OnUnload(function()
-    if DesyncConnection then DesyncConnection:Disconnect() end
-    if KillAuraConnection then KillAuraConnection:Disconnect() end
-    print("[Ragebot] Unloaded!")
+    if DesyncConnection then
+        DesyncConnection:Disconnect()
+    end
+    if KillAuraConnection then
+        KillAuraConnection:Disconnect()
+    end
+    print('[Ragebot] Unloaded!')
     Library.Unloaded = true
 end)
 
-print("[Ragebot] Initialized successfully")
+print('[Ragebot] Initialized successfully')

@@ -4375,7 +4375,7 @@ end
 getgenv().RagebotToggle = getgenv().RagebotBox:AddToggle('RagebotToggle', {
     Text = 'Enable Ragebot',
     Default = false,
-    Tooltip = 'Enable or disable the Ragebot functionality (teleports 100 studs above target and activates Kill Aura).',
+    Tooltip = 'Enable or disable the Ragebot functionality (teleports to random position and activates Kill Aura).',
     Callback = function(state)
         getgenv().RagebotToggleActive = state
         getgenv().RagebotEnabled = state
@@ -4393,10 +4393,12 @@ getgenv().RagebotToggle = getgenv().RagebotBox:AddToggle('RagebotToggle', {
                     end)
                 end
             end
+            workspace.FallenPartsDestroyHeight = -50 -- Reset Anti Void
             Library:Notify("Ragebot disabled.", 3)
             print("[Ragebot] Toggle disabled")
         else
             local tool = equipAug()
+            workspace.FallenPartsDestroyHeight = -math.huge -- Enable Anti Void
             if tool then
                 Library:Notify("Ragebot enabled with [AUG].", 3)
             else
@@ -4448,10 +4450,12 @@ getgenv().RagebotToggle = getgenv().RagebotBox:AddToggle('RagebotToggle', {
                     end)
                 end
             end
+            workspace.FallenPartsDestroyHeight = -50 -- Reset Anti Void
             Library:Notify("Ragebot disabled via keybind.", 3)
             print("[Ragebot] Keybind disabled")
         else
             local tool = equipAug()
+            workspace.FallenPartsDestroyHeight = -math.huge -- Enable Anti Void
             if tool then
                 Library:Notify("Ragebot enabled with [AUG] via keybind.", 3)
             else
@@ -4481,7 +4485,7 @@ getgenv().RagebotToggle = getgenv().RagebotBox:AddToggle('RagebotToggle', {
 getgenv().RagebotDropdown = getgenv().RagebotBox:AddDropdown('RageTarget', {
     SpecialType = 'Player',
     Text = 'Select Ragebot Target',
-    Tooltip = 'Select a player to lock the view, teleport above, and apply Kill Aura.',
+    Tooltip = 'Select a player to lock the view, teleport, and apply Kill Aura.',
     Callback = function(value)
         getgenv().SelectedRageTarget = value
         print("[Ragebot] Selected target:", tostring(value))
@@ -4583,77 +4587,55 @@ getgenv().Services.Players.PlayerRemoving:Connect(function()
 end)
 
 -- Loop for camera tracking, teleportation, and Kill Aura
-task.spawn(function()
-    local lastAugCheck = 0
-    while true do
-        if getgenv().RagebotEnabled and getgenv().SelectedRageTarget then
-            local targetPlayer = getgenv().Services.Players:FindFirstChild(getgenv().SelectedRageTarget)
-            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") and getgenv().Services.LocalPlayer.Character then
-                local rootPart = getgenv().Services.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                local targetHead = targetPlayer.Character:FindFirstChild("Head")
-                if rootPart and targetHead then
-                    -- Save original position
-                    if not getgenv().LastPlayerPosition then
-                        getgenv().LastPlayerPosition = rootPart.CFrame
-                    end
-
-                    -- Teleport 100 studs above the target for Kill Aura
-                    local targetPos = targetPlayer.Character.HumanoidRootPart.Position
-                    local newPos = Vector3.new(targetPos.X, targetPos.Y + 100, targetPos.Z)
-                    pcall(function()
-                        rootPart.CFrame = CFrame.new(newPos)
-                        print("[Ragebot] Teleported to:", newPos)
-                    end)
-
-                    -- Set camera to setback unless View is enabled
-                    if not getgenv().RagebotViewEnabled then
-                        pcall(function()
-                            getgenv().RagebotSetback.CFrame = getgenv().LastPlayerPosition * CFrame.new(0, rootPart.Size.Y / 2 + 0.5, 0)
-                            workspace.CurrentCamera.CameraSubject = getgenv().RagebotSetback
-                        end)
-                    elseif targetPlayer.Character:FindFirstChild("Humanoid") then
-                        workspace.CurrentCamera.CameraSubject = targetPlayer.Character.Humanoid
-                    end
-
-                    -- Kill Aura: Fire at the target's head
-                    if tick() - lastAugCheck > 1 then
-                        local tool = equipAug()
-                        if tool and tool:FindFirstChild("Handle") and tool:FindFirstChild("Ammo") then
-                            pcall(function()
-                                getgenv().Services.ReplicatedStorage.MainEvent:FireServer(
-                                    "ShootGun",
-                                    tool:FindFirstChild("Handle"),
-                                    tool:FindFirstChild("Handle").CFrame.Position,
-                                    targetHead.Position,
-                                    targetHead,
-                                    Vector3.new(0, 0, -1)
-                                )
-                                print("[Ragebot] Fired at target:", getgenv().SelectedRageTarget)
-                            end)
-                        end
-                        lastAugCheck = tick()
-                    end
-
-                    -- Reset position to allow free movement
-                    pcall(function()
-                        rootPart.CFrame = getgenv().LastPlayerPosition
-                    end)
-                else
-                    getgenv().RagebotViewEnabled = false
-                    if getgenv().RagebotViewToggle then
-                        pcall(function() getgenv().RagebotViewToggle:SetValue(false) end)
-                    end
-                    if getgenv().Services.LocalPlayer.Character then
-                        workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-                        if getgenv().LastPlayerPosition then
-                            pcall(function()
-                                getgenv().Services.LocalPlayer.Character.HumanoidRootPart.CFrame = getgenv().LastPlayerPosition
-                                getgenv().LastPlayerPosition = nil
-                            end)
-                        end
-                    end
-                    Library:Notify("Ragebot target is invalid, disabling view and teleport.", 3)
+getgenv().Services.RunService.Heartbeat:Connect(function()
+    if getgenv().RagebotEnabled and getgenv().SelectedRageTarget then
+        local targetPlayer = getgenv().Services.Players:FindFirstChild(getgenv().SelectedRageTarget)
+        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") and getgenv().Services.LocalPlayer.Character then
+            local rootPart = getgenv().Services.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            local targetHead = targetPlayer.Character:FindFirstChild("Head")
+            if rootPart and targetHead then
+                -- Save original position
+                if not getgenv().LastPlayerPosition then
+                    getgenv().LastPlayerPosition = rootPart.CFrame
                 end
+                -- Teleport to random position for Kill Aura (like Desync Void)
+                local teleportPos = Vector3.new(
+                    rootPart.Position.X + math.random(-444444, 444444),
+                    rootPart.Position.Y + math.random(-444444, 444444),
+                    rootPart.Position.Z + math.random(-44444, 44444)
+                )
+                pcall(function()
+                    rootPart.CFrame = CFrame.new(teleportPos)
+                    print("[Ragebot] Teleported to:", teleportPos)
+                end)
+                -- Set camera to setback unless View is enabled
+                if not getgenv().RagebotViewEnabled then
+                    pcall(function()
+                        getgenv().RagebotSetback.CFrame = getgenv().LastPlayerPosition * CFrame.new(0, rootPart.Size.Y / 2 + 0.5, 0)
+                        workspace.CurrentCamera.CameraSubject = getgenv().RagebotSetback
+                    end)
+                elseif targetPlayer.Character:FindFirstChild("Humanoid") then
+                    workspace.CurrentCamera.CameraSubject = targetPlayer.Character.Humanoid
+                end
+                -- Kill Aura: Fire at the target's head
+                local tool = equipAug()
+                if tool and tool:FindFirstChild("Handle") and tool:FindFirstChild("Ammo") then
+                    pcall(function()
+                        getgenv().Services.ReplicatedStorage.MainEvent:FireServer(
+                            "ShootGun",
+                            tool:FindFirstChild("Handle"),
+                            tool:FindFirstChild("Handle").CFrame.Position,
+                            targetHead.Position,
+                            targetHead,
+                            Vector3.new(0, 0, -1)
+                        )
+                        print("[Ragebot] Fired at target:", getgenv().SelectedRageTarget)
+                    end)
+                end
+                -- Reset position to allow free movement
+                pcall(function()
+                    rootPart.CFrame = getgenv().LastPlayerPosition
+                end)
             else
                 getgenv().RagebotViewEnabled = false
                 if getgenv().RagebotViewToggle then
@@ -4668,18 +4650,35 @@ task.spawn(function()
                         end)
                     end
                 end
+                workspace.FallenPartsDestroyHeight = -50 -- Reset Anti Void
                 Library:Notify("Ragebot target is invalid, disabling view and teleport.", 3)
             end
-        elseif getgenv().Services.LocalPlayer.Character then
-            workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if getgenv().LastPlayerPosition then
-                pcall(function()
-                    getgenv().Services.LocalPlayer.Character.HumanoidRootPart.CFrame = getgenv().LastPlayerPosition
-                    getgenv().LastPlayerPosition = nil
-                end)
+        else
+            getgenv().RagebotViewEnabled = false
+            if getgenv().RagebotViewToggle then
+                pcall(function() getgenv().RagebotViewToggle:SetValue(false) end)
             end
+            if getgenv().Services.LocalPlayer.Character then
+                workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if getgenv().LastPlayerPosition then
+                    pcall(function()
+                        getgenv().Services.LocalPlayer.Character.HumanoidRootPart.CFrame = getgenv().LastPlayerPosition
+                        getgenv().LastPlayerPosition = nil
+                    end)
+                end
+            end
+            workspace.FallenPartsDestroyHeight = -50 -- Reset Anti Void
+            Library:Notify("Ragebot target is invalid, disabling view and teleport.", 3)
         end
-        task.wait(0.1)
+    elseif getgenv().Services.LocalPlayer.Character then
+        workspace.CurrentCamera.CameraSubject = getgenv().Services.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if getgenv().LastPlayerPosition then
+            pcall(function()
+                getgenv().Services.LocalPlayer.Character.HumanoidRootPart.CFrame = getgenv().LastPlayerPosition
+                getgenv().LastPlayerPosition = nil
+            end)
+        end
+        workspace.FallenPartsDestroyHeight = -50 -- Reset Anti Void
     end
 end)
 

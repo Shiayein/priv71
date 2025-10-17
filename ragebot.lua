@@ -144,10 +144,12 @@ local function reloadAug()
     end
     local ammo = getgenv().EquippedAug.Ammo.Value
     if ammo <= 0 then
+        getgenv().DesyncPaused = true -- Pause desync
         local ammoCount = getAmmoCount()
         if ammoCount <= 0 then
             if not buyItem("90 [AUG Ammo] - $87") then
                 print("[Ragebot] Failed to purchase [AUG] ammo")
+                getgenv().DesyncPaused = false -- Resume desync
                 return false
             end
             print("[Ragebot] Purchased [AUG] ammo")
@@ -158,6 +160,7 @@ local function reloadAug()
         end)
         getgenv().LastReloadTime = tick()
         task.wait(3.7)
+        getgenv().DesyncPaused = false -- Resume desync
         return true
     end
     return true
@@ -366,12 +369,16 @@ KillAuraConnection = getgenv().Services.RunService.RenderStepped:Connect(functio
             local targetRootPart = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
             if tick() - getgenv().LastFireTime >= 0.1 and tick() - getgenv().LastReloadTime >= 3.7 and targetRootPart then
                 if not getgenv().EquippedAug or not getgenv().EquippedAug.Parent or not getgenv().EquippedAug:FindFirstChild("Handle") or not getgenv().EquippedAug:FindFirstChild("Ammo") then
-                    getgenv().EquippedAug = equipAug()
+                    task.spawn(function()
+                        getgenv().EquippedAug = equipAug()
+                    end)
                 end
                 if getgenv().EquippedAug and getgenv().EquippedAug:FindFirstChild("Handle") and getgenv().EquippedAug:FindFirstChild("Ammo") then
                     if not reloadAug() then
                         print("[Ragebot] Failed to reload [AUG] ammo, retrying...")
-                        getgenv().EquippedAug = equipAug()
+                        task.spawn(function()
+                            getgenv().EquippedAug = equipAug()
+                        end)
                     end
                     if getgenv().EquippedAug and getgenv().EquippedAug:FindFirstChild("Handle") and getgenv().EquippedAug:FindFirstChild("Ammo") and getgenv().EquippedAug.Ammo.Value > 0 then
                         pcall(function()

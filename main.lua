@@ -4356,7 +4356,6 @@ local function equipAug()
     for _, tool in pairs(player.Backpack:GetChildren()) do
         if tool.Name == "[AUG]" then
             tool.Parent = player.Character
-            Library:Notify("Equipped [AUG]", 3)
             print("[Ragebot] Equipped [AUG]")
             return tool
         end
@@ -4397,12 +4396,17 @@ getgenv().RagebotToggle = getgenv().RagebotBox:AddToggle('RagebotToggle', {
             Library:Notify("Ragebot disabled.", 3)
             print("[Ragebot] Toggle disabled")
         else
-            equipAug()
+            local tool = equipAug()
+            if tool then
+                Library:Notify("Ragebot enabled with [AUG].", 3)
+            else
+                Library:Notify("Ragebot enabled, but no [AUG] found!", 3)
+            end
             if getgenv().RagebotViewEnabled and getgenv().SelectedRageTarget then
                 local targetPlayer = getgenv().Services.Players:FindFirstChild(getgenv().SelectedRageTarget)
                 if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
                     workspace.CurrentCamera.CameraSubject = targetPlayer.Character.Humanoid
-                    Library:Notify("Ragebot enabled, viewing target: " .. tostring(getgenv().SelectedRageTarget), 3)
+                    Library:Notify("Viewing target: " .. tostring(getgenv().SelectedRageTarget), 3)
                 else
                     getgenv().RagebotViewEnabled = false
                     if getgenv().RagebotViewToggle then
@@ -4447,12 +4451,17 @@ getgenv().RagebotToggle = getgenv().RagebotBox:AddToggle('RagebotToggle', {
             Library:Notify("Ragebot disabled via keybind.", 3)
             print("[Ragebot] Keybind disabled")
         else
-            equipAug()
+            local tool = equipAug()
+            if tool then
+                Library:Notify("Ragebot enabled with [AUG] via keybind.", 3)
+            else
+                Library:Notify("Ragebot enabled via keybind, but no [AUG] found!", 3)
+            end
             if getgenv().RagebotViewEnabled and getgenv().SelectedRageTarget then
                 local targetPlayer = getgenv().Services.Players:FindFirstChild(getgenv().SelectedRageTarget)
                 if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
                     workspace.CurrentCamera.CameraSubject = targetPlayer.Character.Humanoid
-                    Library:Notify("Ragebot enabled via keybind, viewing target: " .. tostring(getgenv().SelectedRageTarget), 3)
+                    Library:Notify("Viewing target: " .. tostring(getgenv().SelectedRageTarget), 3)
                 else
                     getgenv().RagebotViewEnabled = false
                     if getgenv().RagebotViewToggle then
@@ -4607,7 +4616,7 @@ task.spawn(function()
                     end
 
                     -- Kill Aura: Fire at the target's head
-                    if tick() - lastAugCheck > 1 then -- Check Aug every second
+                    if tick() - lastAugCheck > 1 then
                         local tool = equipAug()
                         if tool and tool:FindFirstChild("Handle") and tool:FindFirstChild("Ammo") then
                             pcall(function()

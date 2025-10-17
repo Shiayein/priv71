@@ -4324,12 +4324,17 @@ end)
 
 -- Ragebot Section (Player List + View + Teleport + Kill Aura)
 print("[Ragebot] Initializing...")
+if not Tabs or not Tabs.Players then
+    warn("[Ragebot] Error: Tabs.Players is nil, GUI initialization may fail")
+    return
+end
 getgenv().RagebotBox = Tabs.Players:AddRightGroupbox('Ragebot')
 print("[Ragebot] Groupbox initialized:", tostring(getgenv().RagebotBox))
 
 -- Initialize global variables
 getgenv().RagebotEnabled = false
 getgenv().RagebotViewEnabled = false
+getgenv().RagebotToggleActive = false
 getgenv().SelectedRageTarget = nil
 getgenv().LastPlayerPosition = nil
 getgenv().RagebotSetback = Instance.new("Part")
@@ -4345,7 +4350,6 @@ print("[Ragebot] Setback created")
 local function equipAug()
     local player = getgenv().Services.LocalPlayer
     if not player.Character or not player.Backpack then
-        Library:Notify("Character or Backpack not loaded!", 3)
         print("[Ragebot] Failed to equip Aug: Character or Backpack missing")
         return nil
     end
@@ -4359,7 +4363,6 @@ local function equipAug()
     end
     for _, tool in pairs(player.Character:GetChildren()) do
         if tool.Name == "[AUG]" then
-            Library:Notify("[AUG] already equipped", 3)
             print("[Ragebot] [AUG] already equipped")
             return tool
         end
@@ -4375,6 +4378,7 @@ getgenv().RagebotToggle = getgenv().RagebotBox:AddToggle('RagebotToggle', {
     Default = false,
     Tooltip = 'Enable or disable the Ragebot functionality (teleports 100 studs above target and activates Kill Aura).',
     Callback = function(state)
+        getgenv().RagebotToggleActive = state
         getgenv().RagebotEnabled = state
         if not state then
             getgenv().RagebotViewEnabled = false
@@ -4416,11 +4420,16 @@ getgenv().RagebotToggle = getgenv().RagebotBox:AddToggle('RagebotToggle', {
     Default = 'R',
     Text = 'Ragebot Key',
     Mode = 'Toggle',
-    Tooltip = 'Keybind to toggle Ragebot.',
+    Tooltip = 'Keybind to toggle Ragebot after initial activation.',
     Callback = function(state)
         if getgenv().Services.UserInputService:GetFocusedTextBox() then return end
+        if not getgenv().RagebotToggleActive then
+            Library:Notify("Ragebot toggle must be enabled first!", 3)
+            print("[Ragebot] Keybind ignored: Toggle not active")
+            return
+        end
         getgenv().RagebotEnabled = state
-        pcall(function() getgenv().RagebotToggle:SetValue(state) end) -- Sync keybind with toggle
+        pcall(function() getgenv().RagebotToggle:SetValue(state) end)
         if not state then
             getgenv().RagebotViewEnabled = false
             if getgenv().RagebotViewToggle then
@@ -4542,7 +4551,7 @@ getgenv().Services.Players.PlayerRemoving:Connect(function()
     local names = {}
     for _, plr in pairs(getgenv().Services.Players:GetPlayers()) do
         table.insert(names, plr.Name)
-    }
+    end
     pcall(function()
         getgenv().RagebotDropdown:SetValues(names)
         if getgenv().SelectedRageTarget and not getgenv().Services.Players:FindFirstChild(getgenv().SelectedRageTarget) then
@@ -4566,6 +4575,7 @@ end)
 
 -- Loop for camera tracking, teleportation, and Kill Aura
 task.spawn(function()
+    local lastAugCheck = 0
     while true do
         if getgenv().RagebotEnabled and getgenv().SelectedRageTarget then
             local targetPlayer = getgenv().Services.Players:FindFirstChild(getgenv().SelectedRageTarget)
@@ -4578,7 +4588,7 @@ task.spawn(function()
                         getgenv().LastPlayerPosition = rootPart.CFrame
                     end
 
-                    -- Teleport 100 studs above the target
+                    -- Teleport 100 studs above the target for Kill Aura
                     local targetPos = targetPlayer.Character.HumanoidRootPart.Position
                     local newPos = Vector3.new(targetPos.X, targetPos.Y + 100, targetPos.Z)
                     pcall(function()
@@ -4597,22 +4607,25 @@ task.spawn(function()
                     end
 
                     -- Kill Aura: Fire at the target's head
-                    local tool = equipAug()
-                    if tool and tool:FindFirstChild("Handle") and tool:FindFirstChild("Ammo") then
-                        pcall(function()
-                            getgenv().Services.ReplicatedStorage.MainEvent:FireServer(
-                                "ShootGun",
-                                tool:FindFirstChild("Handle"),
-                                tool:FindFirstChild("Handle").CFrame.Position,
-                                targetHead.Position,
-                                targetHead,
-                                Vector3.new(0, 0, -1)
-                            )
-                            print("[Ragebot] Fired at target:", getgenv().SelectedRageTarget)
-                        end)
+                    if tick() - lastAugCheck > 1 then -- Check Aug every second
+                        local tool = equipAug()
+                        if tool and tool:FindFirstChild("Handle") and tool:FindFirstChild("Ammo") then
+                            pcall(function()
+                                getgenv().Services.ReplicatedStorage.MainEvent:FireServer(
+                                    "ShootGun",
+                                    tool:FindFirstChild("Handle"),
+                                    tool:FindFirstChild("Handle").CFrame.Position,
+                                    targetHead.Position,
+                                    targetHead,
+                                    Vector3.new(0, 0, -1)
+                                )
+                                print("[Ragebot] Fired at target:", getgenv().SelectedRageTarget)
+                            end)
+                        end
+                        lastAugCheck = tick()
                     end
 
-                    -- Reset position to maintain desync effect
+                    -- Reset position to allow free movement
                     pcall(function()
                         rootPart.CFrame = getgenv().LastPlayerPosition
                     end)
